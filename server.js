@@ -1,4 +1,5 @@
 import http from "node:http";
+import { WebSocketServer, WebSocket } from "ws";
 import { readFile } from "node:fs/promises";
 import { randomBytes, scrypt as scryptCallback, timingSafeEqual, createHash } from "node:crypto";
 import { promisify } from "node:util";
@@ -20,8 +21,8 @@ function enter(room,username,role){const token=randomBytes(32).toString("base64u
 function getRoom(req){const s=session(req);if(!s)return{error:[401,{ok:false,error:"Entre na rede com nome e senha."}]};const room=rooms.get(s.roomKey);if(!room)return{error:[404,{ok:false,error:"A rede não existe mais; entre novamente."}]};return{room,s}}
 const server=http.createServer(async(req,res)=>{
  const url=new URL(req.url||"/","http://localhost");
- if(req.method==="GET"&&url.pathname==="/api/health")return send(res,200,{ok:true,service:"Minecraft Proxy VPN API",version:"0.3.0",mode:"password-protected-rooms",vpnTunnelActive:false,time:new Date().toISOString()});
- if(req.method==="GET"&&url.pathname==="/api/status")return send(res,200,{ok:true,api:"online",proxy:"not-configured",vpn:"not-configured",rooms:rooms.size,message:"Redes com configurações e lista de usuários disponíveis; túnel VPN real ainda não configurado."});
+ if(req.method==="GET"&&url.pathname==="/api/health")return send(res,200,{ok:true,service:"Minecraft Proxy VPN API",version:"0.3.0",mode:"password-protected-rooms-with-websocket-relay",relayAvailable:true,vpnTunnelActive:false,time:new Date().toISOString()});
+ if(req.method==="GET"&&url.pathname==="/api/status")return send(res,200,{ok:true,api:"online",proxy:"not-configured",relay:"websocket-packet-relay-ready",vpn:"android-vpn-client-required",relayAvailable:true,vpnTunnelActive:false,rooms:rooms.size,message:"Retransmissão WebSocket autenticada disponível; o túnel VPN completo exige o cliente Android VpnService."});
  if(req.method==="POST"&&["/api/networks/create","/api/networks/join"].includes(url.pathname)){
   if(limited(req))return send(res,429,{ok:false,error:"Muitas tentativas. Aguarde um minuto."});
   let b;try{b=await json(req)}catch(e){return send(res,e.message==="LARGE"?413:400,{ok:false,error:e.message==="LARGE"?"Requisição muito grande.":"JSON inválido."})}
@@ -70,4 +71,32 @@ const server=http.createServer(async(req,res)=>{
  if(!file.startsWith(root))return send(res,403,{ok:false,error:"Acesso negado."});
  try{return send(res,200,(await readFile(file)).toString("utf8"),mime[extname(file)]||"application/octet-stream")}catch{return send(res,404,{ok:false,error:"Não encontrado."})}
 });
-server.listen(port,"0.0.0.0",()=>console.log(`Minecraft Proxy VPN API listening on 0.0.0.0:${port}`));
+
+const wss = new WebSocketServer({ noServer: true, maxPayload: 65536, perMessageDeflate: false });
+server.on("upgrade", (req, socket, head) => {
+  let url;
+  try { url = new URL(req.url || "/", "http://localhost"); } catch { socket.destroy(); return; }
+  if (url.pathname !== "/tunnel") { socket.write("HTTP/1.1 404 Not Found\r\nConnection: close\r\n\r\n"); socket.destroy(); return; }
+  const auth = session(req);
+  const room = auth && rooms.get(auth.roomKey);
+  const member = room && room.members.get(auth.tokenHash);
+  if (!auth || !room || !member) { socket.write("HTTP/1.1 401 Unauthorized\r\nConnection: close\r\n\r\n"); socket.destroy(); return; }
+  wss.handleUpgrade(req, socket, head, (ws) => {
+    if (member.tunnel && member.tunnel.readyState === WebSocket.OPEN) member.tunnel.close(4001, "Sessão substituída");
+    member.tunnel = ws;
+    member.lastSeen = Date.now();
+    ws.on("message", (data, isBinary) => {
+      member.lastSeen = Date.now();
+      if (!isBinary || data.length > 65536) { ws.close(1003, "Somente pacotes binários são aceitos"); return; }
+      for (const peer of room.members.values()) {
+        if (peer === member || !peer.tunnel || peer.tunnel.readyState !== WebSocket.OPEN) continue;
+        if (peer.tunnel.bufferedAmount > 2 * 1024 * 1024) { peer.tunnel.close(1013, "Cliente lento"); continue; }
+        peer.tunnel.send(data, { binary: true });
+      }
+    });
+    ws.on("close", () => { if (member.tunnel === ws) member.tunnel = null; member.lastSeen = Date.now(); });
+    ws.on("error", () => { if (member.tunnel === ws) member.tunnel = null; });
+  });
+});
+
+server.listen(port,"0.0.0.0",()=>console.log(`Minecraft Proxy VPN API and WebSocket relay listening on 0.0.0.0:${port}`));
