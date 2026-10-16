@@ -8,7 +8,7 @@ This repository now contains:
 
 ## Important status
 
-This is an **experimental first implementation**, not a verified production VPN. It has not yet been built or tested on two physical Android phones. The relay forwards binary packets to other authenticated participants in the same in-memory room. TLS protects transport between each client and the relay, but this version does not implement end-to-end packet encryption, multi-peer IP routing, NAT traversal, or reliable reconnection. Do not use it for sensitive traffic.
+This is an **experimental first implementation**, not a verified production VPN. It has not yet been built or tested on two physical Android phones. The relay forwards binary packets to other authenticated participants in the same in-memory room. The Android client encrypts each packet end-to-end with AES-GCM using a key derived from the shared room password and normalized room name; the relay forwards opaque binary frames. This version still does not implement multi-peer IP routing, NAT traversal, or reliable reconnection. It is experimental and should not be treated as a production VPN.
 
 The room/session store is in memory and resets when the Render service restarts or deploys. Create the room again after a reset.
 
