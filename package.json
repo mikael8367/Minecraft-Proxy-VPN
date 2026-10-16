@@ -1,0 +1,13 @@
+{
+  "name": "minecraft-proxy-vpn",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Educational Minecraft network diagnostics dashboard and API",
+  "type": "module",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}
