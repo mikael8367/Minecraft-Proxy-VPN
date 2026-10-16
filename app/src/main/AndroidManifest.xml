@@ -3,9 +3,9 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <application
         android:allowBackup="false"
-        android:label="Mikael VPN" android:icon="@drawable/mikael_vpn_logo"
+        android:label="Mikael VPN" android:icon="@drawable/mikael_vpn_logo" android:roundIcon="@drawable/mikael_vpn_logo" android:allowBackup="false"
         android:usesCleartextTraffic="false"
-        android:theme="@android:style/Theme.Material.Light.NoActionBar">
+        android:theme="@style/Theme.MikaelVPN">
         <activity android:name=".MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
