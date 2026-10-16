@@ -124,7 +124,7 @@ class MainActivity : ComponentActivity() {
                     pendingPassword = pass
                     val permission = VpnService.prepare(this)
                     if (permission != null) vpnPermission.launch(permission)
-                    else launchVpn(token, role)
+                    else launchVpn(token, role, name, pass)
                 }
             } catch (e: Exception) {
                 runOnUiThread { setStatus("Erro de conexão: ${e.message ?: "verifique a internet"}") }
