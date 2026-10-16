@@ -45,6 +45,7 @@ class TunnelVpnService : VpnService() {
     private var client: OkHttpClient? = null
     private val running = AtomicBoolean(false)
     private var writer: FileOutputStream? = null
+    @Volatile private var packetKey: SecretKey? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         if (intent?.action == ACTION_STOP) {
@@ -69,11 +70,12 @@ class TunnelVpnService : VpnService() {
     private fun startTunnel(token: String, role: String, roomName: String, password: String) {
         val local = if (role == "owner") "10.77.0.1" else "10.77.0.2"
         val remote = if (role == "owner") "10.77.0.2" else "10.77.0.1"
-        val packetKey = try { deriveKey(password, roomName) } catch (e: Exception) {
+        val derivedKey = try { deriveKey(password, roomName) } catch (e: Exception) {
             Log.e(TAG, "Não foi possível preparar a chave de criptografia", e)
             stopSelf()
             return
         }
+        packetKey = derivedKey
         try {
             tun = Builder()
                 .setSession("Minecraft VPN")
@@ -109,7 +111,7 @@ class TunnelVpnService : VpnService() {
             override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
                 try {
                     synchronized(this@TunnelVpnService) {
-                        val packet = decryptPacket(packetKey, bytes.toByteArray())
+                        val packet = decryptPacket(packetKey ?: return, bytes.toByteArray())
                         writer?.write(packet)
                         writer?.flush()
                     }
@@ -167,7 +169,7 @@ class TunnelVpnService : VpnService() {
                 while (running.get()) {
                     val count = input.read(buffer)
                     if (count <= 0) continue
-                    val encrypted = encryptPacket(packetKey, buffer.copyOf(count))
+                    val encrypted = encryptPacket(packetKey ?: return@Thread, buffer.copyOf(count))
                     val frame = ByteString.of(*encrypted)
                     val accepted = socket?.send(frame) ?: false
                     if (!accepted) Log.w(TAG, "Pacote descartado: WebSocket indisponível")
@@ -187,6 +189,7 @@ class TunnelVpnService : VpnService() {
         try { tun?.close() } catch (_: Exception) {}
         tun = null
         writer = null
+        packetKey = null
         try { client?.dispatcher?.executorService?.shutdown() } catch (_: Exception) {}
         client = null
         stopForeground(STOP_FOREGROUND_REMOVE)
