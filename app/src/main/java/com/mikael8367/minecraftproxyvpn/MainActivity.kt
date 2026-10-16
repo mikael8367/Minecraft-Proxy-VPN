@@ -63,7 +63,7 @@ class MainActivity : ComponentActivity() {
             setBackgroundColor(panel)
         }
         header.addView(TextView(this).apply {
-            text = "MINECRAFT VPN"; textSize = 12f; setTextColor(green); setTypeface(null, Typeface.BOLD)
+            text = "MIKAEL VPN"; textSize = 12f; setTextColor(green); setTypeface(null, Typeface.BOLD)
             letterSpacing = 0.16f
         })
         header.addView(TextView(this).apply {
@@ -190,7 +190,7 @@ class MainActivity : ComponentActivity() {
                         room.setText(item.optString("name"))
                         username.setText(item.optString("nick"))
                         password.setText(item.optString("password"))
-                        new android.app.AlertDialog.Builder(this)
+                        android.app.AlertDialog.Builder(this)
                             .setMessage("Deseja entrar nesta rede como amigo?")
                             .setNegativeButton("Cancelar", null)
                             .setPositiveButton("Entrar") { _, _ -> submit("/api/networks/join", "member") }.show()
