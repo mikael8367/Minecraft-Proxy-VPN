@@ -1,6 +1,7 @@
 package com.mikael8367.minecraftproxyvpn
 
 import android.app.Activity
+import androidx.activity.ComponentActivity
 import android.content.Intent
 import android.net.VpnService
 import android.os.Build
@@ -16,7 +17,7 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.util.concurrent.Executors
 
-class MainActivity : Activity() {
+class MainActivity : ComponentActivity() {
     private val executor = Executors.newSingleThreadExecutor()
     private lateinit var room: EditText
     private lateinit var username: EditText
