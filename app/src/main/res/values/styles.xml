@@ -1,0 +1,10 @@
+<resources>
+    <style name="Theme.MikaelVPN" parent="@android:style/Theme.Material.NoActionBar">
+        <item name="android:fontFamily">sans</item>
+        <item name="android:colorAccent">#30D285</item>
+        <item name="android:statusBarColor">#07131A</item>
+        <item name="android:navigationBarColor">#07131A</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowActionModeOverlay">true</item>
+    </style>
+</resources>
