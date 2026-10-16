@@ -1,102 +1,15 @@
-const $ = (id) => document.getElementById(id);
-const TOKEN_KEY = "minecraftProxyNetworkToken";
-function setNetworkMessage(message, isError = false) {
-  $("networkMessage").textContent = message;
-  $("networkMessage").style.color = isError ? "#ff9a9a" : "";
-}
-function setActiveNetwork(name) {
-  $("activeNetwork").hidden = !name;
-  $("activeNetworkName").textContent = name || "";
-}
-async function networkAction(path) {
-  const name = $("networkName").value.trim();
-  const password = $("networkPassword").value;
-  if (name.length < 3 || name.length > 40 || password.length < 6) {
-    setNetworkMessage("Informe um nome de 3 a 40 caracteres e uma senha de pelo menos 6 caracteres.", true);
-    return;
-  }
-  $("createNetwork").disabled = true;
-  $("joinNetwork").disabled = true;
-  try {
-    const response = await fetch(path, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, password })
-    });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Não foi possível completar a operação.");
-    try { sessionStorage.setItem(TOKEN_KEY, data.token); } catch {}
-    setActiveNetwork(data.network.name);
-    setNetworkMessage(data.message + " Participantes nesta instância: " + data.network.members + ".");
-    $("networkPassword").value = "";
-  } catch (error) {
-    setNetworkMessage(error.message || "Falha de conexão. Tente novamente.", true);
-  } finally {
-    $("createNetwork").disabled = false;
-    $("joinNetwork").disabled = false;
-  }
-}
-async function restoreNetwork() {
-  let token = "";
-  try { token = sessionStorage.getItem(TOKEN_KEY) || ""; } catch {}
-  if (!token) return;
-  try {
-    const response = await fetch("/api/networks/me", { headers: { Authorization: "Bearer " + token }, cache: "no-store" });
-    const data = await response.json();
-    if (!response.ok) throw new Error(data.error || "Sessão expirada.");
-    setActiveNetwork(data.network.name);
-    setNetworkMessage("Sessão restaurada. Participantes nesta instância: " + data.network.members + ".");
-  } catch {
-    try { sessionStorage.removeItem(TOKEN_KEY); } catch {}
-    setActiveNetwork("");
-  }
-}
-$("createNetwork").addEventListener("click", () => networkAction("/api/networks/create"));
-$("joinNetwork").addEventListener("click", () => networkAction("/api/networks/join"));
-$("leaveNetwork").addEventListener("click", async () => {
-  let token = "";
-  try { token = sessionStorage.getItem(TOKEN_KEY) || ""; } catch {}
-  try {
-    await fetch("/api/networks/leave", { method: "POST", headers: { Authorization: "Bearer " + token } });
-  } finally {
-    try { sessionStorage.removeItem(TOKEN_KEY); } catch {}
-    setActiveNetwork("");
-    setNetworkMessage("Você saiu da rede.");
-  }
-});
-async function refreshStatus() {
-  $("headline").textContent = "Verificando API…";
-  $("subhead").textContent = "Consultando o serviço";
-  try {
-    const response = await fetch("/api/status", { cache: "no-store" });
-    if (!response.ok) throw new Error("HTTP " + response.status);
-    const data = await response.json();
-    $("headline").textContent = "API online";
-    $("subhead").textContent = data.message;
-    $("api").textContent = data.api === "online" ? "Online" : "Indisponível";
-    $("vpn").textContent = "Não configurado";
-    $("dot").style.background = "#5de39a";
-  } catch {
-    $("headline").textContent = "API indisponível";
-    $("subhead").textContent = "Verifique o deploy e tente novamente.";
-    $("api").textContent = "Offline";
-    $("dot").style.background = "#ff7f7f";
-  }
-}
-$("refresh").addEventListener("click", refreshStatus);
-$("save").addEventListener("click", () => {
-  const host = $("host").value.trim();
-  const port = Number($("port").value);
-  if (!host || host.length > 253 || /[^a-zA-Z0-9.:[\]-]/.test(host) || !Number.isInteger(port) || port < 1 || port > 65535) {
-    $("saved").textContent = "Confira o endereço e a porta (1 a 65535).";
-    return;
-  }
-  try { localStorage.setItem("minecraftProxyTarget", JSON.stringify({ host, port })); } catch {}
-  $("saved").textContent = "Configuração salva somente neste navegador: " + host + ":" + port;
-});
-try {
-  const target = JSON.parse(localStorage.getItem("minecraftProxyTarget") || "null");
-  if (target) { $("host").value = target.host; $("port").value = target.port; $("saved").textContent = "Configuração local: " + target.host + ":" + target.port; }
-} catch {}
-refreshStatus();
-restoreNetwork();
+const $=id=>document.getElementById(id),TOKEN_KEY="minecraftProxyNetworkToken";
+function token(){try{return sessionStorage.getItem(TOKEN_KEY)||""}catch{return""}}
+function setMsg(id,msg,error=false){$(id).textContent=msg;$(id).style.color=error?"#ff9a9a":""}
+function active(name){$("networkPanel").hidden=!name;$("activeNetworkName").textContent=name||""}
+async function networkAction(path){const name=$("networkName").value.trim(),password=$("networkPassword").value,username=$("username").value.trim();if(name.length<3||name.length>40||password.length<6||username.length<2||username.length>20){setMsg("networkMessage","Preencha nome da rede, senha (mínimo 6 caracteres) e usuário (2–20 caracteres).",true);return}
+$("createNetwork").disabled=$("joinNetwork").disabled=true;try{const r=await fetch(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({name,password,username})}),d=await r.json();if(!r.ok)throw Error(d.error||"Falha na operação.");sessionStorage.setItem(TOKEN_KEY,d.token);$("networkPassword").value="";setMsg("networkMessage",d.message);active(d.network.name);loadNetwork()}catch(e){setMsg("networkMessage",e.message||"Erro de conexão.",true)}finally{$("createNetwork").disabled=$("joinNetwork").disabled=false}}
+async function api(path,options={}){const headers={...(options.headers||{})};if(token())headers.Authorization="Bearer "+token();return fetch(path,{...options,headers,cache:"no-store"})}
+async function loadNetwork(){if(!token())return;try{const r=await api("/api/networks/me"),d=await r.json();if(!r.ok)throw Error(d.error);const n=d.network,s=n.settings;active(n.name);$("description").value=s.description;$("visibility").value=s.visibility;$("maxUsers").value=s.maxUsers;$("gameVersion").value=s.gameVersion;$("serverAddress").value=s.serverAddress;$("serverPort").value=s.serverPort;$("allowNewMembers").checked=s.allowNewMembers;$("showMembers").checked=s.showMembers;$("memberCount").textContent=d.connectedCount;$("roleNotice").textContent=d.role==="owner"?"Você é o criador e pode editar as configurações.":"Você é participante; somente o criador pode editar as configurações.";const owner=d.role==="owner";["description","visibility","maxUsers","gameVersion","serverAddress","serverPort","allowNewMembers","showMembers","saveSettings"].forEach(id=>$(id).disabled=!owner);await loadMembers()}catch(e){active("");setMsg("networkMessage",e.message||"Não foi possível carregar a rede.",true);try{sessionStorage.removeItem(TOKEN_KEY)}catch{}}}
+async function loadMembers(){try{const r=await api("/api/networks/members"),d=await r.json();if(!r.ok)throw Error(d.error);$("memberCount").textContent=d.connectedCount;if(!d.showMembers){$("membersList").textContent="A lista de usuários foi ocultada pelo criador.";return}if(!d.members.length){$("membersList").textContent="Nenhum usuário listado.";return}$("membersList").replaceChildren(...d.members.map(m=>{const row=document.createElement("div");row.className="member";const name=document.createElement("span");name.textContent=m.username+(m.role==="owner"?" (criador)":"");const state=document.createElement("span");state.className="pill";state.textContent=m.connected?"● Conectado":"○ Inativo";row.append(name,state);return row}))}catch(e){$("membersList").textContent=e.message||"Erro ao carregar usuários."}}
+$("createNetwork").addEventListener("click",()=>networkAction("/api/networks/create"));$("joinNetwork").addEventListener("click",()=>networkAction("/api/networks/join"));$("saveSettings").addEventListener("click",async()=>{const body={description:$("description").value,visibility:$("visibility").value,maxUsers:Number($("maxUsers").value),gameVersion:$("gameVersion").value,serverAddress:$("serverAddress").value,serverPort:Number($("serverPort").value),allowNewMembers:$("allowNewMembers").checked,showMembers:$("showMembers").checked};try{const r=await api("/api/networks/settings",{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)}),d=await r.json();if(!r.ok)throw Error(d.error);setMsg("settingsMessage",d.message);await loadNetwork()}catch(e){setMsg("settingsMessage",e.message,true)}});$("refreshMembers").addEventListener("click",loadMembers);
+$("leaveNetwork").addEventListener("click",async()=>{try{await api("/api/networks/leave",{method:"POST"})}finally{try{sessionStorage.removeItem(TOKEN_KEY)}catch{}active("");setMsg("networkMessage","Você saiu da rede.");$("membersList").textContent="—"}});
+async function refreshStatus(){try{const r=await fetch("/api/status",{cache:"no-store"}),d=await r.json();if(!r.ok)throw Error();$("headline").textContent="API online";$("subhead").textContent=d.message;$("api").textContent="Online";$("vpn").textContent="Não configurado";$("dot").style.background="#5de39a"}catch{$("headline").textContent="API indisponível";$("subhead").textContent="Verifique o deploy.";$("api").textContent="Offline";$("dot").style.background="#ff7f7f"}}
+$("refresh").addEventListener("click",refreshStatus);$("save").addEventListener("click",()=>{const host=$("host").value.trim(),port=Number($("port").value);if(!host||host.length>253||/[^a-zA-Z0-9.:[\]-]/.test(host)||!Number.isInteger(port)||port<1||port>65535){$("saved").textContent="Confira o endereço e a porta.";return}try{localStorage.setItem("minecraftProxyTarget",JSON.stringify({host,port}))}catch{}$("saved").textContent="Salvo neste navegador: "+host+":"+port});
+try{const t=JSON.parse(localStorage.getItem("minecraftProxyTarget")||"null");if(t){$("host").value=t.host;$("port").value=t.port;$("saved").textContent="Configuração local: "+t.host+":"+t.port}}catch{}
+refreshStatus();if(token())loadNetwork();
