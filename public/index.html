@@ -1,47 +1,12 @@
 <!doctype html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="theme-color" content="#101a14">
-  <title>Minecraft Proxy VPN</title>
-  <style>
-    :root{color-scheme:dark;--bg:#0b110e;--panel:#131e18;--line:#293b30;--text:#edf7ef;--muted:#a7b8ac;--green:#5de39a;--amber:#ffd27a}
-    *{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#1b3827 0,#0b110e 55%);font:16px system-ui,-apple-system,sans-serif;color:var(--text);min-height:100vh}
-    main{width:min(760px,100%);margin:auto;padding:24px 16px 48px}.brand{display:flex;gap:12px;align-items:center;margin:12px 0 28px}.logo{display:grid;place-items:center;width:48px;height:48px;border-radius:15px;background:#1c4930;font-size:24px}.eyebrow{color:var(--green);font-size:12px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}h1{font-size:clamp(27px,6vw,38px);line-height:1.1;margin:5px 0}p{color:var(--muted);line-height:1.55}.panel{background:rgba(19,30,24,.94);border:1px solid var(--line);border-radius:20px;padding:20px;margin:14px 0;box-shadow:0 12px 40px #0002}.status{display:flex;gap:12px;align-items:center}.dot{width:11px;height:11px;border-radius:50%;background:var(--amber);box-shadow:0 0 14px #ffd27a55}.status strong{display:block}.small{font-size:13px;color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.metric{background:#0d1711;border:1px solid var(--line);padding:14px;border-radius:14px}.metric b{display:block;margin-top:6px;font-size:16px}label{display:block;font-size:14px;margin:14px 0 7px;color:#d9e7dc}input{width:100%;padding:13px;border:1px solid #36503f;background:#0b130e;border-radius:12px;color:var(--text);font:inherit}button{border:0;border-radius:12px;padding:13px 16px;font:700 15px system-ui;cursor:pointer}.primary{background:var(--green);color:#082012;width:100%;margin-top:14px}.secondary{background:#20362a;color:var(--text);border:1px solid #36503f}.notice{border-left:3px solid var(--amber);padding:10px 12px;background:#2c2516;border-radius:0 10px 10px 0;color:#f5dfb2;font-size:14px;line-height:1.5}.footer{text-align:center;font-size:12px;color:#8fa496;margin-top:26px}code{color:var(--green)}@media(max-width:440px){.grid{grid-template-columns:1fr}.panel{padding:16px}}
-  </style>
-</head>
-<body>
-<main>
-  <header class="brand"><div class="logo" aria-hidden="true">⛏</div><div><div class="eyebrow">Projeto experimental</div><h1>Minecraft Proxy VPN</h1></div></header>
-  <p>Um painel inicial para estudar conectividade de Minecraft Java pelo Android. Interface e API podem ser hospedadas no Render.</p>
-  <section class="panel">
-    <div class="status"><span class="dot" id="dot"></span><div><strong id="headline">Verificando API…</strong><span class="small" id="subhead">Consultando o serviço</span></div></div>
-    <div class="grid" style="margin-top:18px">
-      <div class="metric"><span class="small">API</span><b id="api">Verificando</b></div>
-      <div class="metric"><span class="small">Túnel VPN</span><b id="vpn">Não configurado</b></div>
-    </div>
-    <button class="secondary" id="refresh" style="width:100%;margin-top:14px">Atualizar estado</button>
-  </section>
-  <section class="panel">
-    <h2 style="margin:0 0 8px;font-size:20px">Diagnóstico de conexão</h2>
-    <p class="small">Informe o endereço do seu servidor para guardar como referência neste navegador. Esta versão não testa portas nem encaminha tráfego.</p>
-    <label for="host">Endereço do servidor Minecraft</label>
-    <input id="host" maxlength="253" placeholder="ex.: play.exemplo.net" autocomplete="off">
-    <label for="port">Porta Java</label>
-    <input id="port" type="number" min="1" max="65535" value="25565" inputmode="numeric">
-    <button class="primary" id="save">Salvar configuração neste aparelho</button>
-    <p class="small" id="saved" role="status">Nenhum endereço salvo.</p>
-  </section>
-  <section class="panel">
-    <h2 style="margin-top:0;font-size:20px">Próximas etapas</h2>
-    <p>1. Publicar a API e confirmar que o estado aparece como online.</p>
-    <p>2. Desenvolver um cliente Android usando <code>VpnService</code>.</p>
-    <p>3. Configurar um gateway compatível com túneis e testar em um ambiente autorizado.</p>
-    <div class="notice">A API hospedada no Render não é, por si só, uma VPN. O botão de estado não ativa um túnel real e esta versão não altera o tráfego do Minecraft.</div>
-  </section>
-  <div class="footer">Minecraft Proxy VPN · versão 0.2.0 · projeto educacional</div>
-</main>
-<script src="/app.js"></script>
-</body>
-</html>
+<html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101a14"><title>Minecraft Proxy VPN</title>
+<style>
+:root{color-scheme:dark;--panel:#131e18;--line:#293b30;--text:#edf7ef;--muted:#a7b8ac;--green:#5de39a;--amber:#ffd27a}*{box-sizing:border-box}body{margin:0;background:radial-gradient(ellipse at top,#1b3827 0,#0b110e 55%);font:16px system-ui,sans-serif;color:var(--text);min-height:100vh}main{width:min(760px,100%);margin:auto;padding:24px 16px 48px}.brand{display:flex;gap:12px;align-items:center;margin:12px 0 28px}.logo{display:grid;place-items:center;width:48px;height:48px;border-radius:15px;background:#1c4930;font-size:24px}.eyebrow{color:var(--green);font-size:12px;font-weight:800;letter-spacing:.13em;text-transform:uppercase}h1{font-size:clamp(27px,6vw,38px);line-height:1.1;margin:5px 0}p{color:var(--muted);line-height:1.55}.panel{background:rgba(19,30,24,.94);border:1px solid var(--line);border-radius:20px;padding:20px;margin:14px 0;box-shadow:0 12px 40px #0002}.status{display:flex;gap:12px;align-items:center}.dot{width:11px;height:11px;border-radius:50%;background:var(--amber)}.status strong{display:block}.small{font-size:13px;color:var(--muted)}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.metric{background:#0d1711;border:1px solid var(--line);padding:14px;border-radius:14px}.metric b{display:block;margin-top:6px;font-size:16px}label{display:block;font-size:14px;margin:14px 0 7px;color:#d9e7dc}input,select{width:100%;padding:13px;border:1px solid #36503f;background:#0b130e;border-radius:12px;color:var(--text);font:inherit}button{border:0;border-radius:12px;padding:13px 16px;font:700 15px system-ui;cursor:pointer}.primary{background:var(--green);color:#082012;width:100%;margin-top:14px}.secondary{background:#20362a;color:var(--text);border:1px solid #36503f}.notice{border-left:3px solid var(--amber);padding:10px 12px;background:#2c2516;border-radius:0 10px 10px 0;color:#f5dfb2;font-size:14px;line-height:1.5}.footer{text-align:center;font-size:12px;color:#8fa496;margin-top:26px}code{color:var(--green)}.member{display:flex;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}.member:last-child{border:0}.pill{font-size:12px;color:var(--green)}button:disabled{opacity:.5}@media(max-width:440px){.grid{grid-template-columns:1fr}.panel{padding:16px}}
+</style></head><body><main>
+<header class="brand"><div class="logo">⛏</div><div><div class="eyebrow">Projeto experimental</div><h1>Minecraft Proxy VPN</h1></div></header>
+<p>Crie redes protegidas por senha, ajuste as configurações e veja os participantes conectados.</p>
+<section class="panel"><div class="status"><span class="dot" id="dot"></span><div><strong id="headline">Verificando API…</strong><span class="small" id="subhead">Consultando o serviço</span></div></div><div class="grid" style="margin-top:18px"><div class="metric"><span class="small">API</span><b id="api">Verificando</b></div><div class="metric"><span class="small">Túnel VPN</span><b id="vpn">Não configurado</b></div></div><button class="secondary" id="refresh" style="width:100%;margin-top:14px">Atualizar estado</button></section>
+<section class="panel"><h2 style="margin-top:0;font-size:20px">Criar ou entrar em uma rede</h2><label for="networkName">Nome da rede</label><input id="networkName" maxlength="40" placeholder="ex.: Amigos Minecraft" autocomplete="off"><label for="networkPassword">Senha da rede (mínimo 6 caracteres)</label><input id="networkPassword" type="password" minlength="6" maxlength="128" placeholder="Digite a senha" autocomplete="new-password"><label for="username">Seu nome de usuário</label><input id="username" maxlength="20" placeholder="ex.: Mikael" autocomplete="nickname"><div class="grid" style="margin-top:14px"><button class="primary" id="createNetwork" style="margin-top:0">Criar rede</button><button class="secondary" id="joinNetwork">Entrar na rede</button></div><p class="small" id="networkMessage" role="status">Você ainda não entrou em uma rede.</p></section>
+<section class="panel" id="networkPanel" hidden><h2 style="margin-top:0;font-size:20px">Minha rede</h2><div class="grid"><div class="metric"><span class="small">Nome</span><b id="activeNetworkName">—</b></div><div class="metric"><span class="small">Usuários conectados</span><b id="memberCount">0</b></div></div><label for="description">Descrição</label><input id="description" maxlength="120" placeholder="Descrição da rede"><label for="visibility">Visibilidade</label><select id="visibility"><option value="private">Privada</option><option value="listed">Listada (somente informativo)</option></select><label for="maxUsers">Limite de usuários (2–100)</label><input id="maxUsers" type="number" min="2" max="100" value="20"><label for="gameVersion">Versão do Minecraft</label><input id="gameVersion" maxlength="40" placeholder="ex.: Java 1.12.2"><label for="serverAddress">Endereço do servidor Minecraft (opcional)</label><input id="serverAddress" maxlength="253" placeholder="play.exemplo.net"><label for="serverPort">Porta do servidor</label><input id="serverPort" type="number" min="1" max="65535" value="25565"><label><input id="allowNewMembers" type="checkbox" checked style="width:auto;margin-right:8px">Permitir novas entradas</label><label><input id="showMembers" type="checkbox" checked style="width:auto;margin-right:8px">Mostrar lista de usuários</label><button class="primary" id="saveSettings">Salvar configurações</button><p class="small" id="settingsMessage" role="status"></p><h3>Usuários conectados</h3><div id="membersList" class="small">Carregando usuários…</div><button class="secondary" id="refreshMembers" style="width:100%;margin-top:12px">Atualizar usuários</button><button class="secondary" id="leaveNetwork" style="width:100%;margin-top:12px">Sair da rede</button><p class="small" id="roleNotice"></p></section>
+<section class="panel"><h2 style="margin-top:0;font-size:20px">Diagnóstico de conexão</h2><p class="small">Salva o endereço de referência apenas neste navegador; ainda não testa portas nem encaminha tráfego.</p><label for="host">Endereço</label><input id="host" maxlength="253" placeholder="play.exemplo.net"><label for="port">Porta Java</label><input id="port" type="number" min="1" max="65535" value="25565"><button class="primary" id="save">Salvar neste aparelho</button><p class="small" id="saved" role="status">Nenhum endereço salvo.</p></section>
+<section class="panel"><h2 style="margin-top:0;font-size:20px">Aviso técnico</h2><div class="notice">As redes desta versão são salas de autenticação, não túneis VPN reais. Usuários conectados significa sessões ativas no painel; o Minecraft ainda não trafega pela rede criada. As salas ficam na memória e podem desaparecer quando o serviço reiniciar.</div></section><div class="footer">Minecraft Proxy VPN · versão 0.3.0 · projeto educacional</div></main><script src="/app.js"></script></body></html>
