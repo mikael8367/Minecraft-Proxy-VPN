@@ -248,6 +248,7 @@ internal sealed class MainForm : Form
 
     private async Task BuildPublicNetworks()
     {
+        body.Controls.Clear();
         body.Controls.Add(new Label {
             Text = "Redes públicas", ForeColor = white, Font = new Font("Segoe UI", 22, FontStyle.Bold),
             AutoSize = true, Location = new Point(4, 4)
