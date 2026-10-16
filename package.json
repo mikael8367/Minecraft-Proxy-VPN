@@ -2,12 +2,15 @@
   "name": "minecraft-proxy-vpn",
   "version": "0.1.0",
   "private": true,
-  "description": "Educational Minecraft network diagnostics dashboard and API",
+  "description": "Password-protected room coordination and authenticated WebSocket packet relay; Android VPN client in development",
   "type": "module",
   "scripts": {
     "start": "node server.js"
   },
   "engines": {
     "node": ">=20"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
   }
 }
