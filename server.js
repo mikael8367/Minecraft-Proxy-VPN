@@ -23,21 +23,25 @@ const server=http.createServer(async(req,res)=>{
  const url=new URL(req.url||"/","http://localhost");
  if(req.method==="GET"&&url.pathname==="/api/health")return send(res,200,{ok:true,service:"Minecraft Proxy VPN API",version:"0.3.0",mode:"password-protected-rooms-with-websocket-relay",relayAvailable:true,vpnTunnelActive:false,time:new Date().toISOString()});
  if(req.method==="GET"&&url.pathname==="/api/status")return send(res,200,{ok:true,api:"online",proxy:"not-configured",relay:"websocket-packet-relay-ready",vpn:"android-vpn-client-required",relayAvailable:true,vpnTunnelActive:false,rooms:rooms.size,message:"Retransmissão WebSocket autenticada disponível; o túnel VPN completo exige o cliente Android VpnService."});
+ if(req.method==="GET"&&url.pathname==="/api/networks/public"){
+  const items=[...rooms.values()].filter(r=>r.settings.visibility==="public"&&r.settings.allowNewMembers).map(r=>({name:r.name,description:r.settings.description,gameVersion:r.settings.gameVersion,connectedCount:memberList(r).filter(m=>m.connected).length,maxUsers:r.settings.maxUsers}));
+  return send(res,200,{ok:true,networks:items});
+ }
  if(req.method==="POST"&&["/api/networks/create","/api/networks/join"].includes(url.pathname)){
   if(limited(req))return send(res,429,{ok:false,error:"Muitas tentativas. Aguarde um minuto."});
   let b;try{b=await json(req)}catch(e){return send(res,e.message==="LARGE"?413:400,{ok:false,error:e.message==="LARGE"?"Requisição muito grande.":"JSON inválido."})}
-  const name=norm(b.name),password=typeof b.password==="string"?b.password:"",username=norm(b.username||"Jogador");
+  const name=norm(b.name),password=typeof b.password==="string"?b.password:"",username=norm(b.username||"Jogador"),visibility=b.visibility==="public"?"public":"private";
   if(name.length<3||name.length>40||!/^[\p{L}\p{N} _.-]+$/u.test(name))return send(res,400,{ok:false,error:"Nome da rede: 3–40 caracteres, letras, números, espaços, ponto, _ ou -."});
-  if(password.length<6||password.length>128)return send(res,400,{ok:false,error:"A senha deve ter entre 6 e 128 caracteres."});
+  if(url.pathname.endsWith("/create") ? (visibility==="private" && (password.length<6||password.length>128)) : password.length>128)return send(res,400,{ok:false,error:"A senha privada deve ter entre 6 e 128 caracteres."});
   if(username.length<2||username.length>20||!/^[\p{L}\p{N}_ -]+$/u.test(username))return send(res,400,{ok:false,error:"Nome de usuário: 2–20 caracteres."});
   const k=key(name);
   if(url.pathname.endsWith("/create")){
    if(rooms.has(k))return send(res,409,{ok:false,error:"Já existe uma rede com esse nome."});
-   const room={key:k,name,password:await pwRecord(password),createdAt:Date.now(),ownerUsername:username,settings:{description:"Minha rede Minecraft",visibility:"private",maxUsers:20,allowNewMembers:true,showMembers:true,gameVersion:"Qualquer versão",serverAddress:"",serverPort:25565},members:new Map()};
+   const room={key:k,name,password:visibility==="public"?null:await pwRecord(password),createdAt:Date.now(),ownerUsername:username,settings:{description:"Minha rede Minecraft",visibility,maxUsers:20,allowNewMembers:true,showMembers:true,gameVersion:"Qualquer versão",serverAddress:"",serverPort:25565},members:new Map()};
    rooms.set(k,room);const token=enter(room,username,"owner");
    return send(res,201,{ok:true,message:"Rede criada.",network:{name:room.name,settings:room.settings,members:memberList(room)},token});
   }
-  const room=rooms.get(k);if(!room||!(await pwCheck(password,room.password)))return send(res,401,{ok:false,error:"Nome da rede ou senha incorretos."});
+  const room=rooms.get(k);if(!room || (room.settings.visibility==="private" && (!room.password || !(await pwCheck(password,room.password)))))return send(res,401,{ok:false,error:"Nome da rede ou senha incorretos."});
   if(!room.settings.allowNewMembers)return send(res,403,{ok:false,error:"O administrador desativou novas entradas nesta rede."});
   if(memberList(room).filter(m=>m.connected).length>=room.settings.maxUsers)return send(res,409,{ok:false,error:"A rede atingiu o limite de usuários."});
   const token=enter(room,username,"member");return send(res,200,{ok:true,message:"Você entrou na rede.",network:{name:room.name,settings:room.settings,members:memberList(room)},token});
@@ -53,7 +57,7 @@ const server=http.createServer(async(req,res)=>{
   let b;try{b=await json(req)}catch{return send(res,400,{ok:false,error:"JSON inválido."})}
   const s=g.room.settings;
   if(b.description!==undefined){const v=norm(b.description);if(v.length>120)return send(res,400,{ok:false,error:"Descrição limitada a 120 caracteres."});s.description=v}
-  if(b.visibility!==undefined){if(!["private","listed"].includes(b.visibility))return send(res,400,{ok:false,error:"Visibilidade inválida."});s.visibility=b.visibility}
+  if(b.visibility!==undefined){if(!["private","public"].includes(b.visibility))return send(res,400,{ok:false,error:"Visibilidade inválida."});s.visibility=b.visibility}
   if(b.maxUsers!==undefined){const n=Number(b.maxUsers);if(!Number.isInteger(n)||n<2||n>100)return send(res,400,{ok:false,error:"Limite de usuários deve ser de 2 a 100."});s.maxUsers=n}
   if(b.allowNewMembers!==undefined)s.allowNewMembers=Boolean(b.allowNewMembers);
   if(b.showMembers!==undefined)s.showMembers=Boolean(b.showMembers);
