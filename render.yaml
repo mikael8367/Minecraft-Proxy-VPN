@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: minecraft-proxy-vpn
+    runtime: node
+    plan: free
+    branch: main
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
