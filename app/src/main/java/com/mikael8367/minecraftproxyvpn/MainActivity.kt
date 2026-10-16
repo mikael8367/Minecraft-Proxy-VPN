@@ -96,10 +96,10 @@ class MainActivity : ComponentActivity() {
     private fun showTab(tab: Int) {
         currentTab = tab
         content.removeAllViews()
-        if (tab == 0) showHome() else showNetworks()
+        if (tab == 0) showHome() else if (tab == 1) showNetworks() else showPublicNetworks()
         // Highlight the selected tab through the accent color.
         val nav = root.getChildAt(2) as? LinearLayout
-        if (nav != null) for (i in 0..1) (nav.getChildAt(i) as TextView).setTextColor(if (i == tab) green else muted)
+        if (nav != null) for (i in 0..2) (nav.getChildAt(i) as TextView).setTextColor(if (i == tab) green else muted)
     }
 
     private fun showHome() {
@@ -108,6 +108,22 @@ class MainActivity : ComponentActivity() {
         card.addView(label("NOME DA REDE"))
         room = field("Ex.: Mundo do Mikael")
         card.addView(room)
+        card.addView(label("TIPO DE REDE"))
+        visibility = Spinner(this).apply {
+            adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, listOf("Privada — exige senha", "Pública — sem senha"))
+            setPadding(dp(8), dp(4), dp(8), dp(4))
+            setBackgroundColor(Color.rgb(33, 44, 60))
+        }
+        card.addView(visibility, LinearLayout.LayoutParams(-1, dp(48)))
+        visibility.onItemSelectedListener = object : android.widget.AdapterView.OnItemSelectedListener {
+            override fun onItemSelected(parent: android.widget.AdapterView<*>?, view: View?, position: Int, id: Long) {
+                if (::password.isInitialized) {
+                    password.visibility = if (position == 0) View.VISIBLE else View.GONE
+                    if (position == 1) password.setText("")
+                }
+            }
+            override fun onNothingSelected(parent: android.widget.AdapterView<*>?) {}
+        }
         card.addView(label("SEU APELIDO"))
         username = field("Como você aparece na rede")
         card.addView(username)
@@ -234,6 +250,44 @@ class MainActivity : ComponentActivity() {
             }.show()
     }
 
+    private fun showPublicNetworks() {
+        content.addView(sectionTitle("Redes públicas", "Redes abertas que aceitam entrada sem senha."))
+        val loading = TextView(this).apply { text = "Buscando redes públicas…"; textSize = 14f; setTextColor(muted) }
+        content.addView(loading)
+        executor.execute {
+            try {
+                val conn = URL("https://minecraft-proxy-vpn.onrender.com/api/networks/public").openConnection() as HttpURLConnection
+                conn.connectTimeout = 15000; conn.readTimeout = 15000
+                val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+                val items = json.optJSONArray("networks") ?: JSONArray()
+                runOnUiThread {
+                    content.removeView(loading)
+                    if (items.length() == 0) {
+                        val empty = card()
+                        empty.addView(TextView(this).apply { text = "Nenhuma rede pública disponível"; textSize = 17f; setTextColor(white); gravity = Gravity.CENTER })
+                        empty.addView(TextView(this).apply { text = "Crie uma rede pública pela aba Início para ela aparecer aqui."; textSize = 13f; setTextColor(muted); gravity = Gravity.CENTER; setPadding(0, dp(8), 0, 0) })
+                        content.addView(empty)
+                    } else for (i in 0 until items.length()) {
+                        val item = items.optJSONObject(i) ?: continue
+                        val itemCard = card()
+                        itemCard.addView(TextView(this).apply { text = "🌐  " + item.optString("name"); textSize = 18f; setTextColor(white); setTypeface(null, Typeface.BOLD) })
+                        itemCard.addView(TextView(this).apply { text = item.optString("description", "Rede pública") + "\\nJogadores: " + item.optInt("connectedCount") + "/" + item.optInt("maxUsers"); textSize = 13f; setTextColor(muted); setPadding(0, dp(8), 0, dp(8)) })
+                        itemCard.addView(primaryButton("Entrar sem senha") {
+                            showTab(0)
+                            room.setText(item.optString("name"))
+                            username.setText("")
+                            password.setText("")
+                            submit("/api/networks/join", "member")
+                        })
+                        content.addView(itemCard)
+                    }
+                }
+            } catch (e: Exception) {
+                runOnUiThread { loading.text = "Não foi possível carregar redes públicas. Verifique a conexão." }
+            }
+        }
+    }
+
     private fun submit(path: String, role: String) {
         val name = room.text.toString().trim()
         val nick = username.text.toString().trim()
@@ -249,7 +303,7 @@ class MainActivity : ComponentActivity() {
                     requestMethod = "POST"; connectTimeout = 20000; readTimeout = 20000; doOutput = true
                     setRequestProperty("Content-Type", "application/json")
                 }
-                val body = JSONObject().put("name", name).put("username", nick).put("password", pass).toString()
+                val body = JSONObject().put("name", name).put("username", nick).put("password", pass).put("visibility", if (isPublic) "public" else "private").toString()
                 conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
                 val code = conn.responseCode
                 val stream = if (code in 200..299) conn.inputStream else conn.errorStream
@@ -271,7 +325,7 @@ class MainActivity : ComponentActivity() {
                         }
                     }
                     if (!found) saved.put(JSONObject().put("id", System.currentTimeMillis().toString())
-                        .put("name", name).put("nick", nick).put("password", pass).put("role", role))
+                        .put("name", name).put("nick", nick).put("password", pass).put("role", role).put("visibility", if (isPublic) "public" else "private"))
                     saveNetworks(saved)
                     pendingToken = token; pendingRole = role; pendingRoomName = name
                     pendingPassword = pass; pendingNick = nick
