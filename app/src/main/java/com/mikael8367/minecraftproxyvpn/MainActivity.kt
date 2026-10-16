@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Bundle
 import android.graphics.Color
 import android.graphics.Typeface
+import android.graphics.drawable.GradientDrawable
 import android.view.Gravity
 import android.view.View
 import android.view.ViewGroup
@@ -28,6 +29,9 @@ class MainActivity : ComponentActivity() {
     private lateinit var room: EditText
     private lateinit var username: EditText
     private lateinit var password: EditText
+    private lateinit var visibility: Spinner
+    private var isPublic = false
+    private val navButtons = mutableListOf<TextView>()
     private var currentTab = 0
     private var pendingToken: String? = null
     private var pendingRole = "member"
@@ -56,50 +60,105 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun buildShell() {
-        root = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setBackgroundColor(bg) }
+        window.statusBarColor = Color.rgb(7, 15, 23)
+        window.navigationBarColor = Color.rgb(7, 15, 23)
+        root = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setBackgroundColor(bg)
+        }
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(22), dp(20), dp(22), dp(16))
-            setBackgroundColor(panel)
+            setPadding(dp(22), dp(20), dp(22), dp(20))
+            background = rounded(Color.rgb(10, 27, 29), 0, Color.rgb(10, 27, 29))
         }
+        val brand = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        brand.addView(TextView(this).apply {
+            text = "⬡"; textSize = 25f; gravity = Gravity.CENTER
+            setTextColor(green); typeface = Typeface.DEFAULT_BOLD
+            background = rounded(Color.rgb(17, 64, 49), 15, Color.rgb(26, 122, 85))
+            layoutParams = LinearLayout.LayoutParams(dp(44), dp(44)).apply { marginEnd = dp(12) }
+        })
+        brand.addView(LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(TextView(this@MainActivity).apply {
+                text = "MIKAEL VPN"; textSize = 17f; setTextColor(white)
+                setTypeface(null, Typeface.BOLD); letterSpacing = 0.05f
+            })
+            addView(TextView(this@MainActivity).apply {
+                text = "CONEXÕES PARA JOGAR JUNTO"; textSize = 9f
+                setTextColor(green); setTypeface(null, Typeface.BOLD); letterSpacing = 0.08f
+                setPadding(0, dp(3), 0, 0)
+            })
+        })
+        header.addView(brand)
         header.addView(TextView(this).apply {
-            text = "MIKAEL VPN"; textSize = 12f; setTextColor(green); setTypeface(null, Typeface.BOLD)
-            letterSpacing = 0.16f
+            text = "Sua rede.\nSeu jogo. Seus amigos."
+            textSize = 26f; setTextColor(white); setTypeface(null, Typeface.BOLD)
+            setLineSpacing(dp(1).toFloat(), 1.0f); setPadding(0, dp(20), 0, dp(4))
         })
         header.addView(TextView(this).apply {
-            text = "Jogue junto, de qualquer lugar"; textSize = 23f; setTextColor(white)
-            setTypeface(null, Typeface.BOLD); setPadding(0, dp(7), 0, 0)
+            text = "Crie uma rede privada ou encontre uma rede pública."
+            textSize = 13f; setTextColor(muted)
         })
         root.addView(header)
-        val scroll = ScrollView(this).apply { isFillViewport = true }
+
+        val scroll = ScrollView(this).apply {
+            isFillViewport = true; clipToPadding = false; setBackgroundColor(bg)
+        }
         content = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(18), dp(18), dp(18), dp(18))
+            setPadding(dp(18), dp(20), dp(18), dp(22))
         }
         scroll.addView(content)
         root.addView(scroll, LinearLayout.LayoutParams(-1, 0, 1f))
+
         val nav = LinearLayout(this).apply {
-            orientation = LinearLayout.HORIZONTAL; setBackgroundColor(panel); setPadding(dp(8), dp(8), dp(8), dp(8))
+            orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            background = rounded(Color.rgb(10, 19, 29), 22, Color.rgb(24, 43, 54))
         }
+        navButtons.clear()
         nav.addView(navButton("⌂\nInício", 0), LinearLayout.LayoutParams(0, dp(58), 1f))
-        nav.addView(navButton("▦\nRedes", 1), LinearLayout.LayoutParams(0, dp(58), 1f))
-        root.addView(nav)
+        nav.addView(navButton("▤\nRedes", 1), LinearLayout.LayoutParams(0, dp(58), 1f))
+        nav.addView(navButton("◎\nPúblicas", 2), LinearLayout.LayoutParams(0, dp(58), 1f))
+        val navOuter = LinearLayout(this).apply {
+            setPadding(dp(12), dp(8), dp(12), dp(10))
+            setBackgroundColor(bg)
+            addView(nav, LinearLayout.LayoutParams(-1, -2))
+        }
+        root.addView(navOuter)
         setContentView(root)
     }
 
     private fun navButton(label: String, tab: Int) = TextView(this).apply {
-        text = label; gravity = Gravity.CENTER; textSize = 14f
-        setTypeface(null, Typeface.BOLD); setPadding(0, dp(4), 0, dp(4))
+        text = label; gravity = Gravity.CENTER; textSize = 12f
+        setTypeface(null, Typeface.BOLD); setLineSpacing(dp(2).toFloat(), 1f)
+        setPadding(dp(2), dp(5), dp(2), dp(5))
+        background = rounded(Color.TRANSPARENT, 15, Color.TRANSPARENT)
         setOnClickListener { showTab(tab) }
+        navButtons.add(this)
     }
 
     private fun showTab(tab: Int) {
         currentTab = tab
         content.removeAllViews()
-        if (tab == 0) showHome() else if (tab == 1) showNetworks() else showPublicNetworks()
-        // Highlight the selected tab through the accent color.
-        val nav = root.getChildAt(2) as? LinearLayout
-        if (nav != null) for (i in 0..2) (nav.getChildAt(i) as TextView).setTextColor(if (i == tab) green else muted)
+        when (tab) {
+            0 -> showHome()
+            1 -> showNetworks()
+            else -> showPublicNetworks()
+        }
+        navButtons.forEachIndexed { index, button ->
+            val selected = index == tab
+            button.setTextColor(if (selected) green else muted)
+            button.background = rounded(
+                if (selected) Color.rgb(16, 55, 44) else Color.TRANSPARENT,
+                15,
+                if (selected) Color.rgb(28, 115, 81) else Color.TRANSPARENT
+            )
+        }
     }
 
     private fun showHome() {
@@ -209,7 +268,7 @@ class MainActivity : ComponentActivity() {
                         android.app.AlertDialog.Builder(this)
                             .setMessage("Deseja entrar nesta rede como amigo?")
                             .setNegativeButton("Cancelar", null)
-                            .setPositiveButton("Entrar") { _, _ -> submit("/api/networks/join", "member") }.show()
+                            .setPositiveButton("Entrar") { _, _ -> submit("/api/networks/join", "member", item.optString("visibility") == "public") }.show()
                     }
                     1 -> editNetwork(item)
                     2 -> android.app.AlertDialog.Builder(this).setMessage("Remover esta rede da lista salva neste celular?")
@@ -271,13 +330,13 @@ class MainActivity : ComponentActivity() {
                         val item = items.optJSONObject(i) ?: continue
                         val itemCard = card()
                         itemCard.addView(TextView(this).apply { text = "🌐  " + item.optString("name"); textSize = 18f; setTextColor(white); setTypeface(null, Typeface.BOLD) })
-                        itemCard.addView(TextView(this).apply { text = item.optString("description", "Rede pública") + "\\nJogadores: " + item.optInt("connectedCount") + "/" + item.optInt("maxUsers"); textSize = 13f; setTextColor(muted); setPadding(0, dp(8), 0, dp(8)) })
+                        itemCard.addView(TextView(this).apply { text = item.optString("description", "Rede pública") + "\nJogadores: " + item.optInt("connectedCount") + "/" + item.optInt("maxUsers"); textSize = 13f; setTextColor(muted); setPadding(0, dp(8), 0, dp(8)) })
                         itemCard.addView(primaryButton("Entrar sem senha") {
                             showTab(0)
                             room.setText(item.optString("name"))
-                            username.setText("")
+                            username.setText("Jogador")
                             password.setText("")
-                            submit("/api/networks/join", "member")
+                            submit("/api/networks/join", "member", true)
                         })
                         content.addView(itemCard)
                     }
@@ -288,30 +347,36 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun submit(path: String, role: String) {
+    private fun submit(path: String, role: String, publicJoin: Boolean = false) {
         val name = room.text.toString().trim()
-        val nick = username.text.toString().trim()
+        val nick = username.text.toString().trim().ifEmpty { if (publicJoin) "Jogador" else "" }
         val pass = password.text.toString()
-        if (name.length < 3 || nick.length < 2 || pass.length < 6) {
-            setStatus("Preencha rede (3+ caracteres), apelido (2+) e senha (6+).")
+        val publicNetwork = publicJoin || (path.endsWith("/create") && ::visibility.isInitialized && visibility.selectedItemPosition == 1)
+        isPublic = publicNetwork
+        val needsPassword = !publicNetwork
+        if (name.length < 3 || nick.length < 2 || (needsPassword && pass.length < 6)) {
+            setStatus(if (needsPassword) "Confira o nome (3+), apelido (2+) e a senha (6+)." else "Confira o nome da rede (3+) e o apelido (2+).")
             return
         }
-        setStatus("Conectando à API…")
+        if (publicJoin && username.text.toString().isBlank()) username.setText(nick)
+        setStatus("Conectando ao serviço…")
         executor.execute {
             try {
                 val conn = (URL("https://minecraft-proxy-vpn.onrender.com$path").openConnection() as HttpURLConnection).apply {
                     requestMethod = "POST"; connectTimeout = 20000; readTimeout = 20000; doOutput = true
                     setRequestProperty("Content-Type", "application/json")
                 }
-                val body = JSONObject().put("name", name).put("username", nick).put("password", pass).put("visibility", if (isPublic) "public" else "private").toString()
+                val body = JSONObject().put("name", name).put("username", nick).put("password", pass)
+                    .put("visibility", if (publicNetwork) "public" else "private").toString()
                 conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
                 val code = conn.responseCode
                 val stream = if (code in 200..299) conn.inputStream else conn.errorStream
                 val response = stream.bufferedReader().use { it.readText() }
                 val json = JSONObject(response)
                 if (code !in 200..299 || !json.optBoolean("ok")) {
-                    runOnUiThread { setStatus(json.optString("error", "Falha ao entrar na rede.")) }
-                    conn.disconnect(); return@execute
+                    runOnUiThread { setStatus(json.optString("error", "Não foi possível conectar à rede.")) }
+                    conn.disconnect()
+                    return@execute
                 }
                 val token = json.getString("token")
                 conn.disconnect()
@@ -321,11 +386,14 @@ class MainActivity : ComponentActivity() {
                     for (i in 0 until saved.length()) {
                         val obj = saved.optJSONObject(i) ?: continue
                         if (obj.optString("name").equals(name, true)) {
-                            obj.put("nick", nick); obj.put("password", pass); obj.put("role", role); found = true
+                            obj.put("nick", nick); obj.put("password", pass); obj.put("role", role)
+                            obj.put("visibility", if (publicNetwork) "public" else "private")
+                            found = true
                         }
                     }
                     if (!found) saved.put(JSONObject().put("id", System.currentTimeMillis().toString())
-                        .put("name", name).put("nick", nick).put("password", pass).put("role", role).put("visibility", if (isPublic) "public" else "private"))
+                        .put("name", name).put("nick", nick).put("password", pass).put("role", role)
+                        .put("visibility", if (publicNetwork) "public" else "private"))
                     saveNetworks(saved)
                     pendingToken = token; pendingRole = role; pendingRoomName = name
                     pendingPassword = pass; pendingNick = nick
@@ -333,7 +401,7 @@ class MainActivity : ComponentActivity() {
                     if (permission != null) vpnPermission.launch(permission) else launchVpn(token, role, name, pass)
                 }
             } catch (e: Exception) {
-                runOnUiThread { setStatus("Erro de conexão: ${e.message ?: "verifique a internet"}") }
+                runOnUiThread { setStatus("Falha na conexão: ${e.message ?: "verifique a internet"}") }
             }
         }
     }
@@ -358,9 +426,13 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun card() = LinearLayout(this).apply {
-        orientation = LinearLayout.VERTICAL; setPadding(dp(16), dp(16), dp(16), dp(16))
-        setBackgroundColor(panel)
-        val params = LinearLayout.LayoutParams(-1, -2); params.bottomMargin = dp(14); layoutParams = params
+        orientation = LinearLayout.VERTICAL
+        setPadding(dp(17), dp(17), dp(17), dp(17))
+        background = rounded(Color.rgb(17, 30, 42), 22, Color.rgb(31, 58, 67))
+        elevation = dp(2).toFloat()
+        val params = LinearLayout.LayoutParams(-1, -2)
+        params.bottomMargin = dp(16)
+        layoutParams = params
     }
 
     private fun label(textValue: String) = TextView(this).apply {
@@ -369,24 +441,39 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun field(hintText: String, secret: Boolean = false) = EditText(this).apply {
-        hint = hintText; setSingleLine(true); textSize = 15f; setTextColor(white); setHintTextColor(muted)
-        setPadding(dp(12), dp(10), dp(12), dp(10))
-        setBackgroundColor(Color.rgb(33, 44, 60))
+        hint = hintText; setSingleLine(true); textSize = 15f
+        setTextColor(white); setHintTextColor(Color.rgb(116, 139, 153))
+        setPadding(dp(14), dp(10), dp(14), dp(10))
+        background = rounded(Color.rgb(10, 22, 32), 14, Color.rgb(37, 68, 77))
+        minHeight = dp(50)
         if (secret) inputType = android.text.InputType.TYPE_CLASS_TEXT or android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD
-        val p = LinearLayout.LayoutParams(-1, dp(50)); p.bottomMargin = dp(7); layoutParams = p
+        val p = LinearLayout.LayoutParams(-1, dp(52)); p.bottomMargin = dp(9); layoutParams = p
     }
 
     private fun primaryButton(textValue: String, click: () -> Unit) = Button(this).apply {
-        text = textValue; setTextColor(Color.rgb(7, 30, 21)); setBackgroundTintList(android.content.res.ColorStateList.valueOf(green))
-        setOnClickListener { click() }
-        val p = LinearLayout.LayoutParams(-1, dp(52)); p.topMargin = dp(12); layoutParams = p
+        text = textValue; isAllCaps = false; textSize = 15f
+        typeface = Typeface.DEFAULT_BOLD; setTextColor(Color.rgb(5, 23, 17))
+        background = rounded(green, 16, Color.rgb(69, 240, 167))
+        elevation = dp(2).toFloat(); minHeight = dp(52)
+        setPadding(dp(12), dp(10), dp(12), dp(10)); setOnClickListener { click() }
+        val p = LinearLayout.LayoutParams(-1, dp(54)); p.topMargin = dp(12); layoutParams = p
     }
 
     private fun secondaryButton(textValue: String, click: () -> Unit) = Button(this).apply {
-        text = textValue; setTextColor(white); setBackgroundTintList(android.content.res.ColorStateList.valueOf(Color.rgb(51, 67, 86)))
+        text = textValue; isAllCaps = false; textSize = 14f; typeface = Typeface.DEFAULT_BOLD
+        setTextColor(white); background = rounded(Color.rgb(20, 40, 51), 16, Color.rgb(41, 79, 91))
+        minHeight = dp(50); setPadding(dp(12), dp(10), dp(12), dp(10))
         setOnClickListener { click() }
-        val p = LinearLayout.LayoutParams(-1, dp(50)); p.topMargin = dp(8); layoutParams = p
+        val p = LinearLayout.LayoutParams(-1, dp(52)); p.topMargin = dp(9); layoutParams = p
     }
+
+    private fun rounded(fill: Int, radiusDp: Int, stroke: Int = Color.TRANSPARENT): GradientDrawable =
+        GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dp(radiusDp).toFloat()
+            setColor(fill)
+            if (stroke != Color.TRANSPARENT) setStroke(dp(1), stroke)
+        }
 
     private fun setStatus(message: String) {
         if (::status.isInitialized) status.text = message
