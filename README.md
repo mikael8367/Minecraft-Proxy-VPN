@@ -1,18 +1,21 @@
 # Minecraft Proxy VPN
 
-Projeto educacional para desenvolver pelo Android um painel e uma API de diagnóstico relacionados a Minecraft Java Multiplayer.
+Projeto educacional para desenvolver pelo Android um painel e uma API para redes nomeadas com senha, relacionado ao uso com Minecraft Java Multiplayer.
 
-## Estado atual
-
-**Versão 0.1.0 — painel e API de diagnóstico, não é uma VPN funcional.**
+## Versão 0.2.0
 
 - Interface responsiva em português.
-- Endpoint `GET /api/health` para health check.
-- Endpoint `GET /api/status` para mostrar o estado da API.
-- Campo de endereço/porta salvo apenas no navegador.
-- Configuração inicial do Render em `render.yaml`.
+- Criar uma rede informando nome e senha.
+- Entrar em uma rede existente exigindo o nome e a senha.
+- Senhas armazenadas como hash scrypt com salt, nunca em texto puro.
+- Sessões com token aleatório, limites básicos de tentativas por IP e endpoints de estado.
+- Endpoints `GET /api/health`, `GET /api/status`, `POST /api/networks/create`, `POST /api/networks/join`, `GET /api/networks/me` e `POST /api/networks/leave`.
 
-Este projeto não encaminha pacotes, não cria um proxy TCP e não inicia um túnel VPN. O indicador de VPN permanece como não configurado até a implementação de um cliente Android baseado em `VpnService` e um gateway compatível.
+## Limitações importantes
+
+**As redes nesta versão são salas lógicas para demonstrar criação e autenticação, não redes VPN/túneis reais.** A aplicação não encaminha pacotes nem conecta clientes Minecraft uns aos outros.
+
+As salas e sessões ficam na memória do processo e são apagadas quando o serviço Render reinicia ou faz deploy. Para uso persistente, a próxima etapa é adicionar banco de dados (por exemplo PostgreSQL) e controles de sessão adequados.
 
 ## Executar localmente
 
@@ -26,19 +29,13 @@ Abra `http://localhost:10000`.
 
 ## Publicar no Render
 
-1. No Render, escolha **New → Blueprint** e conecte este repositório, ou crie um Web Service Node.
-2. Use `npm install` como Build Command e `npm start` como Start Command.
-3. Após o deploy, abra `/api/health` e confirme o JSON com `"ok": true`.
+O serviço usa `PORT`, escuta em `0.0.0.0` e inclui `render.yaml` para configuração inicial. Após o deploy, teste `/api/health`.
 
-O serviço escuta em `0.0.0.0` e usa a variável `PORT` do ambiente.
+## Próximas etapas para uma VPN real
 
-## Próximas etapas
+1. Criar cliente Android nativo usando `VpnService` e consentimento do sistema.
+2. Implementar gateway de túnel compatível, autenticação de dispositivos e regras de rede.
+3. Persistir redes/usuários em banco de dados e armazenar sessões com expiração.
+4. Testar em servidores Minecraft aos quais você tenha autorização de acesso.
 
-1. Criar o cliente Android nativo e a tela de consentimento de VPN.
-2. Definir protocolo e gateway de túnel com autenticação e chaves seguras.
-3. Testar com um servidor de Minecraft que você tenha autorização para acessar.
-4. Medir latência sem prometer redução de ping.
-
-## Segurança
-
-Não coloque senhas, tokens, chaves privadas ou credenciais no repositório. Não transforme o servidor em proxy aberto. Use autenticação, limites de uso e regras de rede antes de disponibilizar encaminhamento de tráfego.
+Não coloque senhas, tokens ou chaves privadas no repositório. Não disponibilize encaminhamento de tráfego como proxy aberto.
