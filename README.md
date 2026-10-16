@@ -1,41 +1,26 @@
 # Minecraft Proxy VPN
 
-Projeto educacional para desenvolver pelo Android um painel e uma API para redes nomeadas com senha, relacionado ao uso com Minecraft Java Multiplayer.
+Painel experimental para redes nomeadas com senha e configurações básicas.
 
-## Versão 0.2.0
+## Versão 0.3.0
 
-- Interface responsiva em português.
-- Criar uma rede informando nome e senha.
-- Entrar em uma rede existente exigindo o nome e a senha.
-- Senhas armazenadas como hash scrypt com salt, nunca em texto puro.
-- Sessões com token aleatório, limites básicos de tentativas por IP e endpoints de estado.
-- Endpoints `GET /api/health`, `GET /api/status`, `POST /api/networks/create`, `POST /api/networks/join`, `GET /api/networks/me` e `POST /api/networks/leave`.
+- Criar e entrar em rede com senha.
+- Definir nome de usuário.
+- Configurações da rede: descrição, visibilidade informativa, limite de usuários, versão Minecraft, endereço/porta de referência, permitir novas entradas e mostrar/ocultar lista.
+- Ver participantes e seus estados de sessão.
+- Somente o criador da rede pode alterar configurações.
+- Senhas armazenadas com scrypt e salt; sessões com tokens aleatórios.
 
-## Limitações importantes
+## Limitações
 
-**As redes nesta versão são salas lógicas para demonstrar criação e autenticação, não redes VPN/túneis reais.** A aplicação não encaminha pacotes nem conecta clientes Minecraft uns aos outros.
+Estas redes ainda são salas de autenticação, **não são túneis VPN** e não transportam tráfego Minecraft. A presença é aproximada por atividade recente na API. Salas e sessões ficam em memória e são apagadas em reinícios/deploys do Render. A opção de rede "listada" é apenas informativa, não cria diretório público.
 
-As salas e sessões ficam na memória do processo e são apagadas quando o serviço Render reinicia ou faz deploy. Para uso persistente, a próxima etapa é adicionar banco de dados (por exemplo PostgreSQL) e controles de sessão adequados.
+## API
 
-## Executar localmente
+- `GET /api/health`, `GET /api/status`
+- `POST /api/networks/create`, `POST /api/networks/join`
+- `GET /api/networks/me`, `GET /api/networks/members`
+- `PUT /api/networks/settings` (somente criador)
+- `POST /api/networks/leave`
 
-Requer Node.js 20 ou superior.
-
-```sh
-npm start
-```
-
-Abra `http://localhost:10000`.
-
-## Publicar no Render
-
-O serviço usa `PORT`, escuta em `0.0.0.0` e inclui `render.yaml` para configuração inicial. Após o deploy, teste `/api/health`.
-
-## Próximas etapas para uma VPN real
-
-1. Criar cliente Android nativo usando `VpnService` e consentimento do sistema.
-2. Implementar gateway de túnel compatível, autenticação de dispositivos e regras de rede.
-3. Persistir redes/usuários em banco de dados e armazenar sessões com expiração.
-4. Testar em servidores Minecraft aos quais você tenha autorização de acesso.
-
-Não coloque senhas, tokens ou chaves privadas no repositório. Não disponibilize encaminhamento de tráfego como proxy aberto.
+Requer Node.js 20+. No Render, use `npm install` e `npm start`. Para persistência, adicione banco de dados antes de uso real. Não armazene segredos no GitHub nem disponibilize proxy aberto.
