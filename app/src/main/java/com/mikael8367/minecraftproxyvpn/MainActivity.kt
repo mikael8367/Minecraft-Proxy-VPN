@@ -25,11 +25,13 @@ class MainActivity : ComponentActivity() {
     private lateinit var status: TextView
     private var pendingToken: String? = null
     private var pendingRole: String = "member"
+    private var pendingRoomName: String = ""
+    private var pendingPassword: String = ""
 
     private val vpnPermission = registerForActivityResult(
         androidx.activity.result.contract.ActivityResultContracts.StartActivityForResult()
     ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) pendingToken?.let { launchVpn(it, pendingRole) }
+        if (result.resultCode == Activity.RESULT_OK) pendingToken?.let { launchVpn(it, pendingRole, pendingRoomName, pendingPassword) }
         else setStatus("Permissão VPN não concedida.")
     }
 
@@ -118,6 +120,8 @@ class MainActivity : ComponentActivity() {
                 runOnUiThread {
                     pendingToken = token
                     pendingRole = role
+                    pendingRoomName = name
+                    pendingPassword = pass
                     val permission = VpnService.prepare(this)
                     if (permission != null) vpnPermission.launch(permission)
                     else launchVpn(token, role)
@@ -128,10 +132,12 @@ class MainActivity : ComponentActivity() {
         }
     }
 
-    private fun launchVpn(token: String, role: String) {
+    private fun launchVpn(token: String, role: String, roomName: String, passphrase: String) {
         val intent = Intent(this, TunnelVpnService::class.java)
             .putExtra(TunnelVpnService.EXTRA_TOKEN, token)
             .putExtra(TunnelVpnService.EXTRA_ROLE, role)
+            .putExtra(TunnelVpnService.EXTRA_ROOM, roomName)
+            .putExtra(TunnelVpnService.EXTRA_PASSWORD, passphrase)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) startForegroundService(intent) else startService(intent)
         setStatus("VPN iniciada. Aguardando o túnel...")
     }
