@@ -76,7 +76,7 @@ class MainActivity : ComponentActivity() {
 
     private fun field(hintText: String) = EditText(this).apply {
         hint = hintText
-        singleLine = true
+        setSingleLine(true)
         textSize = 16f
         layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
     }
