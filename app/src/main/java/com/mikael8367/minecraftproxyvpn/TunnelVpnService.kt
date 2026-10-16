@@ -9,6 +9,16 @@ import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.util.Log
+import android.util.Base64
+import java.security.SecureRandom
+import java.text.Normalizer
+import java.util.Locale
+import javax.crypto.Cipher
+import javax.crypto.SecretKey
+import javax.crypto.SecretKeyFactory
+import javax.crypto.spec.GCMParameterSpec
+import javax.crypto.spec.PBEKeySpec
+import javax.crypto.spec.SecretKeySpec
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.Response
@@ -24,6 +34,8 @@ class TunnelVpnService : VpnService() {
     companion object {
         const val EXTRA_TOKEN = "token"
         const val EXTRA_ROLE = "role"
+        const val EXTRA_ROOM = "room"
+        const val EXTRA_PASSWORD = "password"
         const val ACTION_STOP = "com.mikael8367.minecraftproxyvpn.STOP"
         private const val CHANNEL = "minecraft_vpn"
         private const val TAG = "MinecraftVPN"
@@ -43,19 +55,26 @@ class TunnelVpnService : VpnService() {
         }
         val token = intent?.getStringExtra(EXTRA_TOKEN)
         val role = intent?.getStringExtra(EXTRA_ROLE) ?: "member"
-        if (token.isNullOrBlank()) {
+        val roomName = intent?.getStringExtra(EXTRA_ROOM).orEmpty()
+        val password = intent?.getStringExtra(EXTRA_PASSWORD).orEmpty()
+        if (token.isNullOrBlank() || roomName.isBlank() || password.isBlank()) {
             stopSelf()
             return START_NOT_STICKY
         }
         stopTunnel()
         startForeground(19, notification("Conectando à rede privada..."))
-        startTunnel(token, role)
+        startTunnel(token, role, roomName, password)
         return START_NOT_STICKY
     }
 
-    private fun startTunnel(token: String, role: String) {
+    private fun startTunnel(token: String, role: String, roomName: String, password: String) {
         val local = if (role == "owner") "10.77.0.1" else "10.77.0.2"
         val remote = if (role == "owner") "10.77.0.2" else "10.77.0.1"
+        val packetKey = try { deriveKey(password, roomName) } catch (e: Exception) {
+            Log.e(TAG, "Não foi possível preparar a chave de criptografia", e)
+            stopSelf()
+            return
+        }
         try {
             tun = Builder()
                 .setSession("Minecraft VPN")
@@ -91,11 +110,12 @@ class TunnelVpnService : VpnService() {
             override fun onMessage(webSocket: WebSocket, bytes: ByteString) {
                 try {
                     synchronized(this@TunnelVpnService) {
-                        writer?.write(bytes.toByteArray())
+                        val packet = decryptPacket(packetKey, bytes.toByteArray())
+                        writer?.write(packet)
                         writer?.flush()
                     }
                 } catch (e: Exception) {
-                    Log.e(TAG, "Falha ao entregar pacote à interface VPN", e)
+                    Log.e(TAG, "Pacote recebido inválido ou falha na interface VPN", e)
                 }
             }
 
@@ -111,6 +131,34 @@ class TunnelVpnService : VpnService() {
         })
     }
 
+
+    private fun deriveKey(password: String, roomName: String): SecretKey {
+        val canonicalName = Normalizer.normalize(roomName.trim(), Normalizer.Form.NFKC).lowercase(Locale.ROOT)
+        val salt = ("MinecraftProxyVPN:" + canonicalName).toByteArray(Charsets.UTF_8)
+        val spec = PBEKeySpec(password.toCharArray(), salt, 120000, 256)
+        val raw = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256").generateSecret(spec).encoded
+        spec.clearPassword()
+        return SecretKeySpec(raw, "AES")
+    }
+
+    private fun encryptPacket(key: SecretKey, packet: ByteArray): ByteArray {
+        val nonce = ByteArray(12)
+        SecureRandom().nextBytes(nonce)
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.ENCRYPT_MODE, key, GCMParameterSpec(128, nonce))
+        val encrypted = cipher.doFinal(packet)
+        return nonce + encrypted
+    }
+
+    private fun decryptPacket(key: SecretKey, frame: ByteArray): ByteArray {
+        require(frame.size >= 28) { "Quadro criptografado muito curto" }
+        val nonce = frame.copyOfRange(0, 12)
+        val encrypted = frame.copyOfRange(12, frame.size)
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, nonce))
+        return cipher.doFinal(encrypted)
+    }
+
     private fun startReader() {
         Thread({
             val descriptor = tun ?: return@Thread
@@ -120,7 +168,8 @@ class TunnelVpnService : VpnService() {
                 while (running.get()) {
                     val count = input.read(buffer)
                     if (count <= 0) continue
-                    val frame = ByteString.of(*buffer.copyOf(count))
+                    val encrypted = encryptPacket(packetKey, buffer.copyOf(count))
+                    val frame = ByteString.of(*encrypted)
                     val accepted = socket?.send(frame) ?: false
                     if (!accepted) Log.w(TAG, "Pacote descartado: WebSocket indisponível")
                 }
