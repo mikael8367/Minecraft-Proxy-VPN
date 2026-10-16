@@ -9,7 +9,6 @@ import android.net.VpnService
 import android.os.Build
 import android.os.ParcelFileDescriptor
 import android.util.Log
-import android.util.Base64
 import java.security.SecureRandom
 import java.text.Normalizer
 import java.util.Locale
