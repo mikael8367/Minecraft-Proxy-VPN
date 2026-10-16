@@ -94,6 +94,7 @@ server.on("upgrade", (req, socket, head) => {
         peer.tunnel.send(data, { binary: true });
       }
     });
+    ws.on("ping", () => { member.lastSeen = Date.now(); });
     ws.on("pong", () => { member.lastSeen = Date.now(); });
     ws.on("close", () => { if (member.tunnel === ws) member.tunnel = null; member.lastSeen = Date.now(); });
     ws.on("error", () => { if (member.tunnel === ws) member.tunnel = null; });
