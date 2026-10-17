@@ -28,7 +28,7 @@ internal sealed class MainForm : Form
     private readonly Color muted = Color.FromArgb(151, 174, 184);
     private readonly Color border = Color.FromArgb(36, 67, 78);
 
-    private TextBox network = new(), nick = new(), password = new();
+    private TextBox network = new(), nick = new(), password = new(), description = new();
     private ComboBox visibility = new();
     private Label status = new();
     private Panel sidebar = new(), body = new();
@@ -167,8 +167,8 @@ internal sealed class MainForm : Form
         });
         y += 36;
 
-        var card = new Panel { BackColor = panel, Location = new Point(2, y), Size = new Size(Math.Max(570, body.ClientSize.Width - 34), 430), Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
-        card.Controls.Add(new Panel { BackColor = green, Location = new Point(0, 0), Size = new Size(4, 430) });
+        var card = new Panel { BackColor = panel, Location = new Point(2, y), Size = new Size(Math.Max(570, body.ClientSize.Width - 34), 510), Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right };
+        card.Controls.Add(new Panel { BackColor = green, Location = new Point(0, 0), Size = new Size(4, 510) });
         card.Controls.Add(new Label {
             Text = "Criar ou entrar em uma rede", ForeColor = white, Font = new Font("Segoe UI", 15, FontStyle.Bold),
             AutoSize = true, Location = new Point(24, 20)
@@ -180,6 +180,21 @@ internal sealed class MainForm : Form
         int fy = 88;
         AddField(card, "NOME DA REDE", network, ref fy, "Ex.: Mundo do Mikael");
         AddField(card, "SEU APELIDO", nick, ref fy, "Como você aparece na rede");
+        card.Controls.Add(new Label {
+            Text = "DESCRIÇÃO DA REDE", ForeColor = green, Font = new Font("Segoe UI", 9, FontStyle.Bold),
+            AutoSize = true, Location = new Point(26, fy)
+        });
+        fy += 23;
+        description.Location = new Point(24, fy);
+        description.Size = new Size(Math.Max(330, card.Width - 50), 58);
+        description.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+        description.Multiline = true;
+        description.MaxLength = 180;
+        description.PlaceholderText = "Explique o objetivo, as regras ou a versão do Minecraft (opcional)";
+        description.ScrollBars = ScrollBars.Vertical;
+        StyleTextBox(description);
+        card.Controls.Add(description);
+        fy += 70;
         card.Controls.Add(new Label {
             Text = "VISIBILIDADE DA REDE", ForeColor = green, Font = new Font("Segoe UI", 9, FontStyle.Bold),
             AutoSize = true, Location = new Point(26, fy)
@@ -385,6 +400,7 @@ internal sealed class MainForm : Form
             SetStatus("Conectando ao serviço…");
             var json = JsonSerializer.Serialize(new {
                 name = n, username = u, password = p,
+                description = path.EndsWith("/create", StringComparison.Ordinal) ? description.Text.Trim() : "",
                 visibility = publicNetwork ? "public" : "private"
             });
             using var response = await Http.PostAsync(Api + path, new StringContent(json, Encoding.UTF8, "application/json"));
