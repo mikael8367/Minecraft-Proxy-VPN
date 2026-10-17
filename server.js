@@ -56,8 +56,20 @@ const server=http.createServer(async(req,res)=>{
   const g=getRoom(req);if(g.error)return send(res,...g.error);if(g.s.role!=="owner")return send(res,403,{ok:false,error:"Somente o criador pode alterar as configurações."});
   let b;try{b=await json(req)}catch{return send(res,400,{ok:false,error:"JSON inválido."})}
   const s=g.room.settings;
-  if(b.description!==undefined){const v=norm(b.description);if(v.length>120)return send(res,400,{ok:false,error:"Descrição limitada a 120 caracteres."});s.description=v}
-  if(b.visibility!==undefined){if(!["private","public"].includes(b.visibility))return send(res,400,{ok:false,error:"Visibilidade inválida."});s.visibility=b.visibility}
+  if(b.description!==undefined){const v=norm(b.description);if(v.length>180)return send(res,400,{ok:false,error:"Descrição limitada a 180 caracteres."});s.description=v}
+  if(b.visibility!==undefined){
+   if(!["private","public"].includes(b.visibility))return send(res,400,{ok:false,error:"Visibilidade inválida."});
+   if(b.visibility==="public"){g.room.password=null;s.visibility="public"}
+   else {
+    const nextPassword=typeof b.password==="string"?b.password:"";
+    if(!g.room.password && (nextPassword.length<6||nextPassword.length>128))return send(res,400,{ok:false,error:"Para tornar a rede privada, defina uma senha de 6 a 128 caracteres."});
+    if(nextPassword.length>0){if(nextPassword.length<6||nextPassword.length>128)return send(res,400,{ok:false,error:"A senha deve ter entre 6 e 128 caracteres."});g.room.password=await pwRecord(nextPassword)}
+    s.visibility="private";
+   }
+  } else if(b.password!==undefined && typeof b.password==="string" && b.password.length>0) {
+   if(b.password.length<6||b.password.length>128)return send(res,400,{ok:false,error:"A senha deve ter entre 6 e 128 caracteres."});
+   g.room.password=await pwRecord(b.password);
+  }
   if(b.maxUsers!==undefined){const n=Number(b.maxUsers);if(!Number.isInteger(n)||n<2||n>100)return send(res,400,{ok:false,error:"Limite de usuários deve ser de 2 a 100."});s.maxUsers=n}
   if(b.allowNewMembers!==undefined)s.allowNewMembers=Boolean(b.allowNewMembers);
   if(b.showMembers!==undefined)s.showMembers=Boolean(b.showMembers);
