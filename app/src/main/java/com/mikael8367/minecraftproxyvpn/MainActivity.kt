@@ -369,6 +369,7 @@ class MainActivity : ComponentActivity() {
                     return@setPositiveButton
                 }
                 val settings = JSONObject()
+                    .put("name", n)
                     .put("description", desc.text.toString().trim())
                     .put("password", p)
                     .put("visibility", if (visibilityChoice.selectedItemPosition == 1) "public" else "private")
