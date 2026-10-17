@@ -57,7 +57,8 @@ class TunnelVpnService : VpnService() {
         val role = intent?.getStringExtra(EXTRA_ROLE) ?: "member"
         val roomName = intent?.getStringExtra(EXTRA_ROOM).orEmpty()
         val password = intent?.getStringExtra(EXTRA_PASSWORD).orEmpty()
-        if (token.isNullOrBlank() || roomName.isBlank() || password.isBlank()) {
+        // Redes públicas não usam senha; a chave do túnel é derivada da senha (vazia nas públicas) e do nome.
+        if (token.isNullOrBlank() || roomName.isBlank()) {
             stopSelf()
             return START_NOT_STICKY
         }
