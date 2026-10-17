@@ -30,6 +30,7 @@ class MainActivity : ComponentActivity() {
     private lateinit var username: EditText
     private lateinit var password: EditText
     private lateinit var visibility: Spinner
+    private lateinit var description: EditText
     private var isPublic = false
     private val navButtons = mutableListOf<TextView>()
     private var currentTab = 0
@@ -367,6 +368,7 @@ class MainActivity : ComponentActivity() {
                     setRequestProperty("Content-Type", "application/json")
                 }
                 val body = JSONObject().put("name", name).put("username", nick).put("password", pass)
+                    .put("description", if (path.endsWith("/create")) description.text.toString().trim() else "")
                     .put("visibility", if (publicNetwork) "public" else "private").toString()
                 conn.outputStream.use { it.write(body.toByteArray(Charsets.UTF_8)) }
                 val code = conn.responseCode
