@@ -51,7 +51,9 @@ const server=http.createServer(async(req,res)=>{
   const g=getRoom(req);if(g.error)return send(res,...g.error);return send(res,200,{ok:true,network:{name:g.room.name,settings:g.room.settings,members:g.room.settings.showMembers?memberList(g.room):[],connectedCount:memberList(g.room).filter(m=>m.connected).length,role:g.s.role}});
  }
  if(req.method==="GET"&&url.pathname==="/api/networks/members"){
-  const g=getRoom(req);if(g.error)return send(res,...g.error);return send(res,200,{ok:true,members:g.room.settings.showMembers?memberList(g.room):[],connectedCount:memberList(g.room).filter(m=>m.connected).length,showMembers:g.room.settings.showMembers});
+  const g=getRoom(req);if(g.error)return send(res,...g.error);
+  const visible=g.s.role==="owner"||g.room.settings.showMembers;
+  return send(res,200,{ok:true,members:visible?memberList(g.room):[],connectedCount:memberList(g.room).filter(m=>m.connected).length,showMembers:g.room.settings.showMembers});
  }
  if(req.method==="PUT"&&url.pathname==="/api/networks/settings"){
   const g=getRoom(req);if(g.error)return send(res,...g.error);if(g.s.role!=="owner")return send(res,403,{ok:false,error:"Somente o criador pode alterar as configurações."});
