@@ -314,7 +314,7 @@ class MainActivity : ComponentActivity() {
             setText(item.optString("description"))
             setTextColor(white); setHintTextColor(Color.rgb(116,139,153)); textSize = 14f
             minLines = 2; maxLines = 3; gravity = Gravity.TOP
-            filters = arrayOf(android.text.InputFilter.LengthFilter(120))
+            filters = arrayOf(android.text.InputFilter.LengthFilter(180))
             setPadding(dp(12),dp(10),dp(12),dp(10))
             background = rounded(Color.rgb(10,22,32),12,Color.rgb(37,68,77))
         }
@@ -370,6 +370,7 @@ class MainActivity : ComponentActivity() {
                 }
                 val settings = JSONObject()
                     .put("description", desc.text.toString().trim())
+                    .put("password", p)
                     .put("visibility", if (visibilityChoice.selectedItemPosition == 1) "public" else "private")
                     .put("maxUsers", limit)
                     .put("allowNewMembers", allowMembers.isChecked)
