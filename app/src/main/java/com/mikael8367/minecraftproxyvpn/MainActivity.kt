@@ -543,7 +543,14 @@ class MainActivity : ComponentActivity() {
                                         }
                                     }.setNegativeButton("Cancelar", null).show()
                             }
-                        }.setPositiveButton("Atualizar") { _, _ -> manageMembers(item) }
+                        }.setPositiveButton("Copiar IP do anfitrião") { _, _ ->
+                            val hostAddress = "10.77.0.1"
+                            getSystemService(android.content.ClipboardManager::class.java)
+                                ?.setPrimaryClip(android.content.ClipData.newPlainText("IP virtual do anfitrião", hostAddress))
+                            android.app.AlertDialog.Builder(this).setTitle("IP copiado")
+                                .setMessage("IP virtual: $hostAddress\\nNo Minecraft Java, use Multiplayer → Conexão direta. A porta deve ser a mostrada ao abrir o mundo para LAN.\\n\\nAviso: o túnel ainda é experimental; esse IP só funcionará se a rota entre os dispositivos estiver funcionando.")
+                                .setPositiveButton("OK", null).show()
+                        }.setNeutralButton("Atualizar") { _, _ -> manageMembers(item) }
                         .setNegativeButton("Fechar", null).show()
                 }
             } catch (e: Exception) {
