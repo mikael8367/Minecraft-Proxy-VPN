@@ -56,6 +56,13 @@ const server=http.createServer(async(req,res)=>{
   const g=getRoom(req);if(g.error)return send(res,...g.error);if(g.s.role!=="owner")return send(res,403,{ok:false,error:"Somente o criador pode alterar as configurações."});
   let b;try{b=await json(req)}catch{return send(res,400,{ok:false,error:"JSON inválido."})}
   const s=g.room.settings;
+  if(b.name!==undefined){
+   const nextName=norm(b.name),nextKey=key(nextName);
+   if(nextName.length<3||nextName.length>40||!/^[\\p{L}\\p{N} _.-]+$/u.test(nextName))return send(res,400,{ok:false,error:"Nome da rede: 3–40 caracteres, letras, números, espaços, ponto, _ ou -."});
+   if(nextKey!==g.room.key&&rooms.has(nextKey))return send(res,409,{ok:false,error:"Já existe uma rede com esse nome."});
+   if(nextKey!==g.room.key){rooms.delete(g.room.key);g.room.key=nextKey;rooms.set(nextKey,g.room);for(const sess of sessions.values())if(sess.roomKey===g.s.roomKey)sess.roomKey=nextKey;}
+   g.room.name=nextName;
+  }
   if(b.description!==undefined){const v=norm(b.description);if(v.length>180)return send(res,400,{ok:false,error:"Descrição limitada a 180 caracteres."});s.description=v}
   if(b.visibility!==undefined){
    if(!["private","public"].includes(b.visibility))return send(res,400,{ok:false,error:"Visibilidade inválida."});
