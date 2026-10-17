@@ -303,25 +303,124 @@ class MainActivity : ComponentActivity() {
 
     private fun editNetwork(item: JSONObject) {
         val box = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL; setPadding(dp(22), dp(8), dp(22), 0)
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(18), dp(8), dp(18), dp(4))
         }
         val name = field("Nome da rede").apply { setText(item.optString("name")) }
-        val nick = field("Apelido").apply { setText(item.optString("nick")) }
-        val pass = field("Senha").apply { setText(item.optString("password")) }
-        box.addView(name); box.addView(nick); box.addView(pass)
-        android.app.AlertDialog.Builder(this).setTitle("Configurar rede")
-            .setView(box).setNegativeButton("Cancelar", null)
+        val nick = field("Seu apelido").apply { setText(item.optString("nick")) }
+        val pass = field("Senha (vazia para rede pública)", true).apply { setText(item.optString("password")) }
+        val desc = EditText(this).apply {
+            hint = "Descrição da rede (máx. 120 caracteres)"
+            setText(item.optString("description"))
+            setTextColor(white); setHintTextColor(Color.rgb(116,139,153)); textSize = 14f
+            minLines = 2; maxLines = 3; gravity = Gravity.TOP
+            filters = arrayOf(android.text.InputFilter.LengthFilter(120))
+            setPadding(dp(12),dp(10),dp(12),dp(10))
+            background = rounded(Color.rgb(10,22,32),12,Color.rgb(37,68,77))
+        }
+        val visibilityChoice = Spinner(this).apply {
+            adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item,
+                listOf("Privada — exige senha", "Pública — sem senha"))
+            setSelection(if (item.optString("visibility") == "public") 1 else 0)
+        }
+        val maxUsers = field("Limite de jogadores (2 a 100)").apply {
+            setText(item.optInt("maxUsers",20).toString())
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+        }
+        val version = field("Versão do Minecraft (informativa)").apply {
+            setText(item.optString("gameVersion","Qualquer versão"))
+        }
+        val address = field("Endereço do servidor (opcional)").apply {
+            setText(item.optString("serverAddress"))
+        }
+        val port = field("Porta do servidor (1 a 65535)").apply {
+            setText(item.optInt("serverPort",25565).toString())
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+        }
+        val allowMembers = CheckBox(this).apply {
+            text = "Permitir novas entradas"; setTextColor(white)
+            isChecked = item.optBoolean("allowNewMembers",true)
+        }
+        val showMembers = CheckBox(this).apply {
+            text = "Mostrar lista de participantes"; setTextColor(white)
+            isChecked = item.optBoolean("showMembers",true)
+        }
+        listOf(
+            label("NOME DA REDE"), name, label("SEU APELIDO"), nick,
+            label("SENHA"), pass, label("DESCRIÇÃO"), desc,
+            label("VISIBILIDADE"), visibilityChoice, label("LIMITE DE JOGADORES"), maxUsers,
+            label("VERSÃO DO MINECRAFT"), version, label("ENDEREÇO DO SERVIDOR"), address,
+            label("PORTA"), port, allowMembers, showMembers
+        ).forEach { box.addView(it) }
+        val scroll = ScrollView(this).apply { addView(box) }
+        android.app.AlertDialog.Builder(this).setTitle("Configurações da rede")
+            .setView(scroll).setNegativeButton("Cancelar", null)
             .setPositiveButton("Salvar") { _, _ ->
-                val list = readNetworks()
-                for (i in 0 until list.length()) {
-                    val obj = list.optJSONObject(i) ?: continue
-                    if (obj.optString("id") == item.optString("id")) {
-                        obj.put("name", name.text.toString().trim())
-                        obj.put("nick", nick.text.toString().trim())
-                        obj.put("password", pass.text.toString())
+                val n = name.text.toString().trim()
+                val u = nick.text.toString().trim()
+                val p = pass.text.toString()
+                val limit = maxUsers.text.toString().toIntOrNull()
+                val portNum = port.text.toString().toIntOrNull()
+                if (n.length !in 3..40 || u.length !in 2..20 ||
+                    (visibilityChoice.selectedItemPosition == 0 && p.length !in 6..128) ||
+                    limit == null || limit !in 2..100 || portNum == null || portNum !in 1..65535) {
+                    android.app.AlertDialog.Builder(this).setMessage("Confira nome (3–40), apelido (2–20), senha privada (6–128), limite (2–100) e porta (1–65535).")
+                        .setPositiveButton("OK", null).show()
+                    return@setPositiveButton
+                }
+                val settings = JSONObject()
+                    .put("description", desc.text.toString().trim())
+                    .put("visibility", if (visibilityChoice.selectedItemPosition == 1) "public" else "private")
+                    .put("maxUsers", limit)
+                    .put("allowNewMembers", allowMembers.isChecked)
+                    .put("showMembers", showMembers.isChecked)
+                    .put("gameVersion", version.text.toString().trim())
+                    .put("serverAddress", address.text.toString().trim())
+                    .put("serverPort", portNum)
+                val authToken = item.optString("token")
+                if (authToken.isBlank()) {
+                    android.app.AlertDialog.Builder(this)
+                        .setMessage("Esta rede não tem uma sessão salva para alterar as configurações do servidor. Entre nela novamente e tente outra vez.")
+                        .setPositiveButton("OK", null).show()
+                    return@setPositiveButton
+                }
+                executor.execute {
+                    try {
+                        val conn = (URL("https://minecraft-proxy-vpn.onrender.com/api/networks/settings").openConnection() as HttpURLConnection).apply {
+                            requestMethod = "PUT"; connectTimeout = 15000; readTimeout = 15000; doOutput = true
+                            setRequestProperty("Content-Type","application/json")
+                            setRequestProperty("Authorization","Bearer $authToken")
+                        }
+                        conn.outputStream.use { it.write(settings.toString().toByteArray(Charsets.UTF_8)) }
+                        val code = conn.responseCode
+                        val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+                        val response = JSONObject(stream.bufferedReader().use { it.readText() })
+                        runOnUiThread {
+                            if (code !in 200..299 || !response.optBoolean("ok")) {
+                                setStatus(response.optString("error","Não foi possível salvar as configurações."))
+                            } else {
+                                val list = readNetworks()
+                                for (i in 0 until list.length()) {
+                                    val obj = list.optJSONObject(i) ?: continue
+                                    if (obj.optString("id") == item.optString("id")) {
+                                        obj.put("name",n); obj.put("nick",u); obj.put("password",p)
+                                        obj.put("description",desc.text.toString().trim())
+                                        obj.put("visibility",if (visibilityChoice.selectedItemPosition == 1) "public" else "private")
+                                        obj.put("maxUsers",limit); obj.put("allowNewMembers",allowMembers.isChecked)
+                                        obj.put("showMembers",showMembers.isChecked); obj.put("gameVersion",version.text.toString().trim())
+                                        obj.put("serverAddress",address.text.toString().trim()); obj.put("serverPort",portNum)
+                                    }
+                                }
+                                saveNetworks(list)
+                                setStatus("Configurações da rede salvas.")
+                                showTab(1)
+                            }
+                            conn.disconnect()
+                        }
+                    } catch (e: Exception) {
+                        runOnUiThread { setStatus("Falha ao salvar: ${e.message ?: "verifique a conexão"}") }
                     }
                 }
-                saveNetworks(list); showTab(1)
             }.show()
     }
 
