@@ -30,14 +30,14 @@ const server=http.createServer(async(req,res)=>{
  if(req.method==="POST"&&["/api/networks/create","/api/networks/join"].includes(url.pathname)){
   if(limited(req))return send(res,429,{ok:false,error:"Muitas tentativas. Aguarde um minuto."});
   let b;try{b=await json(req)}catch(e){return send(res,e.message==="LARGE"?413:400,{ok:false,error:e.message==="LARGE"?"Requisição muito grande.":"JSON inválido."})}
-  const name=norm(b.name),password=typeof b.password==="string"?b.password:"",username=norm(b.username||"Jogador"),visibility=b.visibility==="public"?"public":"private";
+  const name=norm(b.name),password=typeof b.password==="string"?b.password:"",username=norm(b.username||"Jogador"),visibility=b.visibility==="public"?"public":"private",description=norm(b.description||"");
   if(name.length<3||name.length>40||!/^[\p{L}\p{N} _.-]+$/u.test(name))return send(res,400,{ok:false,error:"Nome da rede: 3–40 caracteres, letras, números, espaços, ponto, _ ou -."});
   if(url.pathname.endsWith("/create") ? (visibility==="private" && (password.length<6||password.length>128)) : password.length>128)return send(res,400,{ok:false,error:"A senha privada deve ter entre 6 e 128 caracteres."});
   if(username.length<2||username.length>20||!/^[\p{L}\p{N}_ -]+$/u.test(username))return send(res,400,{ok:false,error:"Nome de usuário: 2–20 caracteres."});
   const k=key(name);
   if(url.pathname.endsWith("/create")){
    if(rooms.has(k))return send(res,409,{ok:false,error:"Já existe uma rede com esse nome."});
-   const room={key:k,name,password:visibility==="public"?null:await pwRecord(password),createdAt:Date.now(),ownerUsername:username,settings:{description:"Minha rede Minecraft",visibility,maxUsers:20,allowNewMembers:true,showMembers:true,gameVersion:"Qualquer versão",serverAddress:"",serverPort:25565},members:new Map()};
+   const room={key:k,name,password:visibility==="public"?null:await pwRecord(password),createdAt:Date.now(),ownerUsername:username,settings:{description:description||"Rede Minecraft",visibility,maxUsers:20,allowNewMembers:true,showMembers:true,gameVersion:"Qualquer versão",serverAddress:"",serverPort:25565},members:new Map()};
    rooms.set(k,room);const token=enter(room,username,"owner");
    return send(res,201,{ok:true,message:"Rede criada.",network:{name:room.name,settings:room.settings,members:memberList(room)},token});
   }
