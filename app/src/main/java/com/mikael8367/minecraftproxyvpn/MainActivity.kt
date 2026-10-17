@@ -504,11 +504,13 @@ class MainActivity : ComponentActivity() {
                         if (obj.optString("name").equals(name, true)) {
                             obj.put("nick", nick); obj.put("password", pass); obj.put("role", role)
                             obj.put("visibility", if (publicNetwork) "public" else "private")
+                            obj.put("token", token)
                             found = true
                         }
                     }
                     if (!found) saved.put(JSONObject().put("id", System.currentTimeMillis().toString())
                         .put("name", name).put("nick", nick).put("password", pass).put("role", role)
+                        .put("token", token)
                         .put("visibility", if (publicNetwork) "public" else "private"))
                     saveNetworks(saved)
                     pendingToken = token; pendingRole = role; pendingRoomName = name
