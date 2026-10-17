@@ -395,6 +395,7 @@ class MainActivity : ComponentActivity() {
             label("VERSÃO DO MINECRAFT"), version, label("ENDEREÇO DO SERVIDOR"), address,
             label("PORTA"), port, allowMembers, showMembers
         ).forEach { box.addView(it) }
+        box.addView(primaryButton("Gerenciar usuários conectados") { manageMembers(item) })
         val scroll = ScrollView(this).apply { addView(box) }
         android.app.AlertDialog.Builder(this).setTitle("Configurações da rede")
             .setView(scroll).setNegativeButton("Cancelar", null)
@@ -467,6 +468,88 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }.show()
+    }
+
+    private fun manageMembers(item: JSONObject) {
+        val token = item.optString("token")
+        if (token.isBlank()) {
+            android.app.AlertDialog.Builder(this).setMessage("Entre nesta rede novamente para carregar os usuários e gerenciar acessos.")
+                .setPositiveButton("OK", null).show()
+            return
+        }
+        setStatus("Carregando usuários…")
+        executor.execute {
+            try {
+                val conn = (URL("https://minecraft-proxy-vpn.onrender.com/api/networks/members").openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 15000; readTimeout = 15000
+                    setRequestProperty("Authorization", "Bearer $token")
+                }
+                val code = conn.responseCode
+                val stream = if (code in 200..299) conn.inputStream else conn.errorStream
+                val response = JSONObject(stream.bufferedReader().use { it.readText() })
+                conn.disconnect()
+                runOnUiThread {
+                    if (code !in 200..299 || !response.optBoolean("ok")) {
+                        setStatus(response.optString("error", "Não foi possível carregar os usuários."))
+                        return@runOnUiThread
+                    }
+                    val members = response.optJSONArray("members") ?: JSONArray()
+                    if (members.length() == 0) {
+                        android.app.AlertDialog.Builder(this)
+                            .setTitle("Usuários conectados")
+                            .setMessage("Nenhum usuário está visível no momento. Confira se a opção de mostrar participantes está ativada.")
+                            .setPositiveButton("OK", null).show()
+                        return@runOnUiThread
+                    }
+                    val entries = Array(members.length()) { i ->
+                        val m = members.getJSONObject(i)
+                        val state = if (m.optBoolean("connected")) "Conectado" else "Inativo"
+                        "${m.optString("username")} — ${m.optString("role")} — $state"
+                    }
+                    android.app.AlertDialog.Builder(this)
+                        .setTitle("Usuários da rede")
+                        .setItems(entries) { _, which ->
+                            val m = members.getJSONObject(which)
+                            val username = m.optString("username")
+                            if (m.optString("role") == "owner") {
+                                android.app.AlertDialog.Builder(this).setMessage("Este é o criador da rede; não pode ser expulso ou banido.")
+                                    .setPositiveButton("OK", null).show()
+                            } else {
+                                android.app.AlertDialog.Builder(this)
+                                    .setTitle(username)
+                                    .setItems(arrayOf("Expulsar agora", "Banir desta rede")) { _, action ->
+                                        val path = if (action == 0) "/api/networks/kick" else "/api/networks/ban"
+                                        executor.execute {
+                                            try {
+                                                val actionConn = (URL("https://minecraft-proxy-vpn.onrender.com$path").openConnection() as HttpURLConnection).apply {
+                                                    requestMethod = "POST"; connectTimeout = 15000; readTimeout = 15000; doOutput = true
+                                                    setRequestProperty("Content-Type", "application/json")
+                                                    setRequestProperty("Authorization", "Bearer $token")
+                                                }
+                                                actionConn.outputStream.use { it.write(JSONObject().put("username", username).toString().toByteArray(Charsets.UTF_8)) }
+                                                val actionCode = actionConn.responseCode
+                                                val actionStream = if (actionCode in 200..299) actionConn.inputStream else actionConn.errorStream
+                                                val actionResponse = JSONObject(actionStream.bufferedReader().use { it.readText() })
+                                                actionConn.disconnect()
+                                                runOnUiThread {
+                                                    val message = actionResponse.optString("message", actionResponse.optString("error", "Ação concluída."))
+                                                    setStatus(message)
+                                                    android.app.AlertDialog.Builder(this).setMessage(message)
+                                                        .setPositiveButton("OK") { _, _ -> manageMembers(item) }.show()
+                                                }
+                                            } catch (e: Exception) {
+                                                runOnUiThread { setStatus("Falha ao gerenciar usuário: ${e.message ?: "verifique a conexão"}") }
+                                            }
+                                        }
+                                    }.setNegativeButton("Cancelar", null).show()
+                            }
+                        }.setPositiveButton("Atualizar") { _, _ -> manageMembers(item) }
+                        .setNegativeButton("Fechar", null).show()
+                }
+            } catch (e: Exception) {
+                runOnUiThread { setStatus("Falha ao carregar usuários: ${e.message ?: "verifique a conexão"}") }
+            }
+        }
     }
 
     private fun showPublicNetworks() {
