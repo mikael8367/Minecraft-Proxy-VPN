@@ -83,6 +83,10 @@ class TunnelVpnService : VpnService() {
                 .setMtu(1400)
                 .addAddress(local, 32)
                 .addRoute(remote, 32)
+                // Minecraft Java LAN discovery multicast UDP destination.
+                .addRoute("224.0.2.60", 32)
+                // Limited broadcast sometimes used by LAN discovery.
+                .addRoute("255.255.255.255", 32)
                 .establish() ?: throw IllegalStateException("Android não criou a interface VPN")
             writer = FileOutputStream(tun!!.fileDescriptor)
         } catch (e: Exception) {
