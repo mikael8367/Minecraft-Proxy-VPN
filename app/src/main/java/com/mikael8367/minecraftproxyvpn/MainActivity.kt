@@ -168,6 +168,21 @@ class MainActivity : ComponentActivity() {
         card.addView(label("NOME DA REDE"))
         room = field("Ex.: Mundo do Mikael")
         card.addView(room)
+        card.addView(label("DESCRIÇÃO DA REDE (OPCIONAL)"))
+        description = EditText(this).apply {
+            hint = "Ex.: Mundo survival com amigos"
+            setTextColor(white); setHintTextColor(Color.rgb(116, 139, 153))
+            textSize = 14f
+            setPadding(dp(14), dp(12), dp(14), dp(12))
+            minLines = 2; maxLines = 4; gravity = Gravity.TOP
+            inputType = android.text.InputType.TYPE_CLASS_TEXT or
+                android.text.InputType.TYPE_TEXT_FLAG_CAP_SENTENCES or
+                android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE
+            filters = arrayOf(android.text.InputFilter.LengthFilter(180))
+            background = rounded(Color.rgb(10, 22, 32), 14, Color.rgb(37, 68, 77))
+            layoutParams = LinearLayout.LayoutParams(-1, dp(76)).apply { bottomMargin = dp(9) }
+        }
+        card.addView(description)
         card.addView(label("TIPO DE REDE"))
         visibility = Spinner(this).apply {
             adapter = ArrayAdapter(this@MainActivity, android.R.layout.simple_spinner_dropdown_item, listOf("Privada — exige senha", "Pública — sem senha"))
