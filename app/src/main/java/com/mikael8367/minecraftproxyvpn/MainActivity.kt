@@ -218,6 +218,49 @@ class MainActivity : ComponentActivity() {
             startService(Intent(this, TunnelVpnService::class.java).setAction(TunnelVpnService.ACTION_STOP))
             setStatus("Desconexão solicitada.")
         })
+        statusCard.addView(label("ENTRAR NO MUNDO MINECRAFT"))
+        statusCard.addView(TextView(this).apply {
+            text = "Escolha como o amigo vai encontrar o mundo. A descoberta automática depende de a LAN funcionar através do túnel."
+            textSize = 13f; setTextColor(muted); setPadding(0, dp(3), 0, dp(8))
+        })
+        statusCard.addView(primaryButton("⌕   Tentar descoberta automática (LAN)") {
+            android.app.AlertDialog.Builder(this)
+                .setTitle("Descoberta automática de LAN")
+                .setMessage("No celular anfitrião: abra o mundo no Minecraft Java e escolha Abrir para LAN. No outro dispositivo: abra Multiplayer e aguarde alguns segundos.\n\nAtenção: a descoberta automática usa tráfego de rede local que pode não atravessar este túnel experimental. Se o mundo não aparecer, use Conexão direta.")
+                .setPositiveButton("Entendi", null).show()
+        })
+        val directBox = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, dp(10), 0, dp(2))
+        }
+        directBox.addView(TextView(this).apply {
+            text = "Conexão direta (IP:porta)"; textSize = 15f; setTextColor(white)
+            setTypeface(null, Typeface.BOLD); setPadding(0, 0, 0, dp(6))
+        })
+        val addressInput = field("IP do anfitrião, ex.: 10.77.0.1")
+        val portInput = field("Porta LAN, ex.: 51234").apply {
+            inputType = android.text.InputType.TYPE_CLASS_NUMBER
+        }
+        directBox.addView(addressInput)
+        directBox.addView(portInput)
+        directBox.addView(secondaryButton("Copiar endereço para Multiplayer") {
+            val ip = addressInput.text.toString().trim().ifEmpty { "10.77.0.1" }
+            val port = portInput.text.toString().trim()
+            if (ip.length > 253 || ip.any { !(it.isLetterOrDigit() || it == '.' || it == ':' || it == '-' ) } ||
+                (port.isNotEmpty() && (port.toIntOrNull() == null || port.toInt() !in 1..65535))) {
+                android.app.AlertDialog.Builder(this).setMessage("Confira o IP e a porta. A porta deve estar entre 1 e 65535.")
+                    .setPositiveButton("OK", null).show()
+            } else {
+                val address = if (port.isBlank()) ip else "$ip:$port"
+                val clipboard = getSystemService(android.content.ClipboardManager::class.java)
+                clipboard?.setPrimaryClip(android.content.ClipData.newPlainText("Endereço Minecraft", address))
+                android.app.AlertDialog.Builder(this)
+                    .setTitle("Endereço copiado")
+                    .setMessage("No Minecraft Java, vá a Multiplayer → Conexão direta e cole:\n\n$address\n\nNo anfitrião, use a porta mostrada pelo Minecraft ao abrir o mundo para LAN.")
+                    .setPositiveButton("OK", null).show()
+            }
+        })
+        statusCard.addView(directBox)
         content.addView(statusCard)
         content.addView(TextView(this).apply {
             text = "IP virtual do anfitrião: 10.77.0.1\nIP virtual do amigo: 10.77.0.2\n\nNota: esta versão inicial do túnel ainda é experimental; a conexão direta do Minecraft pode não funcionar em todos os cenários."
