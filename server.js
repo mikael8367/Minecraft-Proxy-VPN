@@ -37,11 +37,12 @@ const server=http.createServer(async(req,res)=>{
   const k=key(name);
   if(url.pathname.endsWith("/create")){
    if(rooms.has(k))return send(res,409,{ok:false,error:"Já existe uma rede com esse nome."});
-   const room={key:k,name,password:visibility==="public"?null:await pwRecord(password),createdAt:Date.now(),ownerUsername:username,settings:{description:description||"Rede Minecraft",visibility,maxUsers:20,allowNewMembers:true,showMembers:true,gameVersion:"Qualquer versão",serverAddress:"",serverPort:25565},members:new Map()};
+   const room={key:k,name,password:visibility==="public"?null:await pwRecord(password),createdAt:Date.now(),ownerUsername:username,settings:{description:description||"Rede Minecraft",visibility,maxUsers:20,allowNewMembers:true,showMembers:true,gameVersion:"Qualquer versão",serverAddress:"",serverPort:25565},members:new Map(),bannedUsers:new Set()};
    rooms.set(k,room);const token=enter(room,username,"owner");
    return send(res,201,{ok:true,message:"Rede criada.",network:{name:room.name,settings:room.settings,members:memberList(room)},token});
   }
   const room=rooms.get(k);if(!room || (room.settings.visibility==="private" && (!room.password || !(await pwCheck(password,room.password)))))return send(res,401,{ok:false,error:"Nome da rede ou senha incorretos."});
+  if(room.bannedUsers?.has(key(username)))return send(res,403,{ok:false,error:"Você foi banido desta rede."});
   if(!room.settings.allowNewMembers)return send(res,403,{ok:false,error:"O administrador desativou novas entradas nesta rede."});
   if(memberList(room).filter(m=>m.connected).length>=room.settings.maxUsers)return send(res,409,{ok:false,error:"A rede atingiu o limite de usuários."});
   const token=enter(room,username,"member");return send(res,200,{ok:true,message:"Você entrou na rede.",network:{name:room.name,settings:room.settings,members:memberList(room)},token});
@@ -84,6 +85,27 @@ const server=http.createServer(async(req,res)=>{
   if(b.serverAddress!==undefined){const v=norm(b.serverAddress);if(v.length>253||/[^a-zA-Z0-9.:[\]-]/.test(v))return send(res,400,{ok:false,error:"Endereço de servidor inválido."});s.serverAddress=v}
   if(b.serverPort!==undefined){const n=Number(b.serverPort);if(!Number.isInteger(n)||n<1||n>65535)return send(res,400,{ok:false,error:"Porta deve estar entre 1 e 65535."});s.serverPort=n}
   return send(res,200,{ok:true,message:"Configurações salvas.",network:{name:g.room.name,settings:s}});
+ }
+ if(req.method==="POST"&&["/api/networks/kick","/api/networks/ban","/api/networks/unban"].includes(url.pathname)){
+  const g=getRoom(req);if(g.error)return send(res,...g.error);
+  if(g.s.role!=="owner")return send(res,403,{ok:false,error:"Somente o criador da rede pode gerenciar usuários."});
+  let b;try{b=await json(req)}catch{return send(res,400,{ok:false,error:"JSON inválido."})}
+  const target=norm(b.username);if(target.length<2||target.length>20)return send(res,400,{ok:false,error:"Nome de usuário inválido."});
+  if(key(target)===key(g.room.ownerUsername))return send(res,400,{ok:false,error:"O criador da rede não pode ser expulso ou banido."});
+  const found=[...g.room.members.entries()].filter(([,m])=>key(m.username)===key(target));
+  if(url.pathname==="/api/networks/unban"){
+   const removed=g.room.bannedUsers?.delete(key(target))||false;
+   return send(res,200,{ok:true,message:removed?"Banimento removido.":"Esse usuário não estava banido."});
+  }
+  if(url.pathname==="/api/networks/ban"){
+   if(!g.room.bannedUsers)g.room.bannedUsers=new Set();
+   g.room.bannedUsers.add(key(target));
+  }
+  for(const [tokenHash,m] of found){
+   if(m.tunnel&&m.tunnel.readyState===WebSocket.OPEN)m.tunnel.close(4003,url.pathname.endsWith("/ban")?"Banido pelo administrador":"Expulso pelo administrador");
+   g.room.members.delete(tokenHash);sessions.delete(tokenHash);
+  }
+  return send(res,200,{ok:true,message:url.pathname.endsWith("/ban")?"Usuário banido da rede.":"Usuário expulso da rede.",username:target});
  }
  if(req.method==="POST"&&url.pathname==="/api/networks/leave"){
   const g=getRoom(req);if(g.error)return send(res,...g.error);sessions.delete(g.s.tokenHash);g.room.members.delete(g.s.tokenHash);return send(res,200,{ok:true,message:"Você saiu da rede."});
